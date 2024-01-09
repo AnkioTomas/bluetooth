@@ -94,7 +94,7 @@ class ScanActivity : BaseActivity() {
                 //   name+= if(TextUtils.isEmpty(companyName))"None" else companyName
                 addDeviceList(
                     BleDevice(
-                        ByteUtils.byteArrayToHexString(scanRecord),
+                        ByteUtils.bytesToHexString(scanRecord)?:"",
                         if (TextUtils.isEmpty(companyName)) "None" else companyName,
                         result.rssi,
                         result.device.address,
