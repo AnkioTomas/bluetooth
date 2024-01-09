@@ -67,4 +67,5 @@
     <string name="active_version">很抱歉，我们不支持API版本低于93的框架。请将Lsposed更新到最新版本。</string>
     <string name="manual_increase">手动增加</string>
     <string name="hide_icon">从桌面启动器隐藏应用图标</string>
+    <string name="company_data">公司名称</string>
 </resources>

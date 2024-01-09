@@ -9,6 +9,7 @@ import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -103,8 +104,8 @@ class MainActivity : BaseActivity() {
             if(SpUtils.getBoolean("pref_enable_webdav", false)){
                try {
                    syncFromServer()
-               }catch (_:Exception){
-                   showMsg(R.string.webdav_error);
+               }catch (e:Exception){
+                  Toast.makeText(this,e.message?:"",Toast.LENGTH_SHORT).show()
                }
             }
         }
@@ -263,7 +264,6 @@ class MainActivity : BaseActivity() {
                 override fun afterTextChanged(s: Editable) {
                     SpUtils.putString("pref_mac", s.toString())
                     saveToLocal()
-                    serverConnect()
                 }
             })
 
@@ -286,7 +286,6 @@ class MainActivity : BaseActivity() {
                 override fun afterTextChanged(s: Editable) {
                     SpUtils.putString("pref_data", s.toString())
                     saveToLocal()
-                    serverConnect()
                 }
             })
 
@@ -300,27 +299,15 @@ class MainActivity : BaseActivity() {
                 binding.tvRssi.text = "-" + value.toInt().toString() + " dBm"
                 SpUtils.putString("pref_rssi", "-" + value.toInt().toString())
                 saveToLocal()
-                serverConnect()
             }
 
         }
-        //webdav页面显示设置
-        fun setWebdavPanel(showWebdav: Boolean) {
-            if (showWebdav) {
-                binding.webdavPanel.visibility = View.VISIBLE
-                binding.senderWebdav.visibility = View.VISIBLE
-            } else {
-                binding.senderWebdav.visibility = View.GONE
-                binding.webdavPanel.visibility = View.GONE
-            }
-        }
+
         //启用webdav
         SpUtils.getBoolean("pref_enable_webdav", false).apply {
-            setWebdavPanel(this)
             binding.webdavEnable.isChecked = this
             binding.webdavEnable.setOnCheckedChangeListener { _, isChecked ->
                 SpUtils.putBoolean("pref_enable_webdav", isChecked)
-                setWebdavPanel(isChecked)
                 //启用webdav重连服务
                 serverConnect()
             }
@@ -345,7 +332,6 @@ class MainActivity : BaseActivity() {
             binding.switchButton.isChecked = this
             binding.switchButton.setOnCheckedChangeListener { _, isChecked ->
                 SpUtils.putBoolean("pref_enable", isChecked)
-                serverConnect()
             }
         }
         //配置信息
@@ -366,7 +352,6 @@ class MainActivity : BaseActivity() {
 
                 override fun afterTextChanged(s: Editable) {
                     SpUtils.putString("webdav_server", s.toString())
-                    serverConnect()
                 }
             })
 
@@ -388,7 +373,6 @@ class MainActivity : BaseActivity() {
 
                 override fun afterTextChanged(s: Editable) {
                     SpUtils.putString("webdav_username", s.toString())
-                    serverConnect()
                 }
             })
 
@@ -410,11 +394,53 @@ class MainActivity : BaseActivity() {
 
                 override fun afterTextChanged(s: Editable) {
                     SpUtils.putString("webdav_password", s.toString())
-                    serverConnect()
                 }
             })
 
         }
+        SpUtils.getString("pref_company", "").apply {
+            binding.companyLabel.setText(this)
+            binding.companyLabel.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                }
+
+                override fun afterTextChanged(s: Editable) {
+                    SpUtils.putString("pref_company", s.toString())
+                }
+            })
+
+        }
+        SpUtils.getString("pref_mac2", "").apply {
+            binding.mac2Label.setText(this)
+            binding.mac2Label.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                }
+
+                override fun afterTextChanged(s: Editable) {
+                    SpUtils.putString("pref_mac2", s.toString())
+                }
+            })
+
+        }
+
         SpUtils.getString("webdav_last", getString(R.string.webdav_no_sync)).apply {
             binding.lastDate.text = this
         }

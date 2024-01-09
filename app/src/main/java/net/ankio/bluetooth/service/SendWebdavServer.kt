@@ -19,12 +19,14 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.ankio.bluetooth.R
+import net.ankio.bluetooth.data.BluetoothData
 import net.ankio.bluetooth.utils.ByteUtils
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
@@ -37,8 +39,8 @@ class SendWebdavServer : Service() {
         private const val CHANNEL_ID = "ForegroundServiceChannel"
     }
     private val TAG = "BluetoothScanService"
-    private var deviceAddress = SpUtils.getString("pref_mac", "") // 指定的蓝牙设备MAC地址
-
+    private var deviceAddress = SpUtils.getString("pref_mac2", "") // 指定的蓝牙设备MAC地址
+    private var deviceCompany = SpUtils.getString("pref_company", "") // 指定的蓝牙设备公司
     private val scanInterval: Long = 10 * 60 * 1000 // 10 minutes
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -59,8 +61,7 @@ class SendWebdavServer : Service() {
             .build()
 
         startForeground(1, notification)
-        if(deviceAddress===""){
-            Log.i(TAG,"You need to set mac first.")
+        if(deviceAddress==="" && deviceCompany===""){
             stopSelf()
         }
         bluetoothAdapter = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -68,29 +69,29 @@ class SendWebdavServer : Service() {
         //扫描结果回调
        scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                deviceAddress = SpUtils.getString("pref_mac", "")
-                if(result.device.address == deviceAddress){
+                val scanRecord = result.scanRecord?.bytes ?: return
+                val companyName = BluetoothData(this@SendWebdavServer).parseManufacturerData(scanRecord)?:""
+                if(result.device.address == deviceAddress|| companyName.contains(deviceCompany)){
                     stopScan()
-                    Log.i(TAG, "Found device: $deviceAddress")
-                    val scanRecord = result.scanRecord?.bytes ?: return
+                    Log.i(TAG, "Found device: ${result.device.address}")
                     val coroutineScope = CoroutineScope(Dispatchers.Main)
-                    try {
-                        coroutineScope .launch(Dispatchers.IO) {
+                    coroutineScope .launch(Dispatchers.IO) {
+                        try {
                             WebdavUtils(
                                 SpUtils.getString("webdav_username", ""),
                                 SpUtils.getString("webdav_password", "")
                             ).sendToServer(
                                 net.ankio.bluetooth.bluetooth.BluetoothData(
-                                    ByteUtils.byteArrayToHexString(scanRecord),
-                                    deviceAddress,
-                                    "-50"
+                                    ByteUtils.bytesToHexString(scanRecord)?:"",
+                                    result.device.address,
+                                    result.rssi.toString()
                                 )
                             )
+                        }catch (e:Exception){
+                            Toast.makeText(this@SendWebdavServer,e.message,Toast.LENGTH_SHORT).show()
+                            Log.i(TAG, "WebdavException")
                         }
-                    }catch (_:Exception){
-                        Log.i(TAG, "WebdavException")
                     }
-
                 }else{
                     Log.i(TAG, "Device: ${result.device.address}")
                 }

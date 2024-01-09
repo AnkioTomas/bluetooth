@@ -162,7 +162,11 @@ open class BaseActivity : AppCompatActivity() {
      * 显示信息
      */
     fun showMsg(int: Int) {
-        Toast.makeText(this, int, Toast.LENGTH_LONG).show()
+        try {
+            Toast.makeText(this, int, Toast.LENGTH_LONG).show()
+        }catch (e:Exception){
+
+        }
     }
 
 }
