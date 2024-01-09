@@ -42,12 +42,6 @@ open class App : Application() {
         //设置语言
         LocaleDelegate.defaultLocale = getLocale()
 
-        //没激活不给进
-        if(!HookUtils.getActiveAndSupportFramework()){
-            Toast.makeText(applicationContext,R.string.active_error,Toast.LENGTH_LONG).show()
-            exitProcess(0)
-        }
-
         //匿名统计
         if(SpUtils.getBoolean("app_center_analyze",true)){
             FlurryAgent.Builder()
