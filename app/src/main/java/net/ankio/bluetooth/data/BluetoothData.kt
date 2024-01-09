@@ -5,39 +5,26 @@ import android.content.Context
 class BluetoothData(context: Context) {
     private val bluetoothCompanyParser = BluetoothCompanyParser(context)
     fun parseManufacturerData(advertisingData: ByteArray): String? {
-        try{
-            var currentIndex = 0
-            while (currentIndex < advertisingData.size) {
-                val fieldLength = advertisingData[currentIndex].toInt() and 0xFF
-                if (fieldLength == 0) {
-                    break
-                }
-                val fieldType = advertisingData[currentIndex + 1].toInt() and 0xFF
-                val fieldData =
-                    advertisingData.copyOfRange(currentIndex + 2, currentIndex + fieldLength + 1)
-                // 解析字段类型
-                when (fieldType) {
-                    0xFF -> {
-                        // 解析 Manufacturer Specific Data 字段
-                        val companyId = parseCompanyId(fieldData, 0)
-                        //fieldData.copyOfRange(2, fieldData.size)
-                        // 处理厂商数据
-                        return bluetoothCompanyParser.getCompanyName(companyId)
-                    }
-                }
-
-                currentIndex += fieldLength + 1
+        var index = 0
+        while (index < advertisingData.size - 2) {
+            val length = advertisingData[index++].toInt() and 0xFF
+            if (length == 0 || index + length > advertisingData.size) {
+                // 长度为0或数据超出数组范围
+                break
             }
-        }catch (_:IndexOutOfBoundsException){
-            return null
+
+            val type = advertisingData[index].toInt() and 0xFF
+            if (type == 0xFF) { // 厂商特定数据类型
+                // 假设厂商ID占据接下来的两个字节
+                if (length >= 3) { // 确保有足够的数据
+                    val companyId = ((advertisingData[index + 2].toInt() and 0xFF) shl 8) or
+                            (advertisingData[index + 1].toInt() and 0xFF)
+                    return bluetoothCompanyParser.getCompanyName(companyId)
+                }
+            }
+            index += length
         }
-        return null
+        return "None"
     }
-
-    private fun parseCompanyId(data: ByteArray, offset: Int): Int {
-        val companyIdBytes = data.copyOfRange(offset, offset + 2)
-        return ((companyIdBytes[1].toInt() and 0xFF) shl 8) or (companyIdBytes[0].toInt() and 0xFF)
-    }
-
 
 }
