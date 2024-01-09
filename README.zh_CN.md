@@ -11,11 +11,27 @@
 
 ## 使用
 
-1. 从[Release](https://github.com/dreamncn/bluetooth/releases)下载最新版本并安装到手机；
+### 蓝牙模拟
+
+1. 从[Release](https://github.com/AnkioTomas/bluetooth/releases)下载最新版本并安装到手机；
 2. 在Lsposed激活并勾选`com.android.bluetooth`;
 3. 在首页搜索蓝牙，并选择你要模拟的蓝牙设备；
 4. 返回首页，点击模拟即可启动；
 5. 尽情享受吧 :)
+
+
+### 使用Webdav同步
+
+#### 作为发送端
+
+1. 输入您的webdav帐户信息。
+2. Mac地址或公司名称二选一。
+3. 点击启用同步和作为发送端口。
+
+#### 作为接收端
+
+1. 输入您的webdav帐户信息。
+2. 点击启用同步。
 
 ## 参与贡献
 
