@@ -66,7 +66,7 @@ class MainActivity : BaseActivity() {
                     binding.sourceCode.movementMethod = LinkMovementMethod.getInstance()
                     binding.sourceCode.text = getString(
                         R.string.about_view_source_code,
-                        "<b><a href=\"https://github.com/dreamncn/bluetooth\n\">GitHub</a></b>"
+                        "<b><a href=\"https://github.com/AnkioTomas/bluetooth\n\">GitHub</a></b>"
                     ).toHtml()
 
                     binding.versionName.text = packageManager.getPackageInfo(packageName, 0).versionName
