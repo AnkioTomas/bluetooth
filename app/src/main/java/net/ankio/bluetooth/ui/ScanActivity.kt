@@ -74,6 +74,8 @@ class ScanActivity : BaseActivity() {
             if (it.resultCode == Activity.RESULT_OK) showMsg(if (defaultAdapter.isEnabled) "蓝牙已打开" else "蓝牙未打开")
         }
 
+
+
     //扫描结果回调
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {

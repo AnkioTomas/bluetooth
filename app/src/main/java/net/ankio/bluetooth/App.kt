@@ -4,11 +4,14 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.text.TextUtils
+import android.widget.Toast
 import com.flurry.android.FlurryAgent
 import com.quickersilver.themeengine.ThemeEngine
+import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.LocaleDelegate
 import net.ankio.bluetooth.utils.SpUtils
 import java.util.*
+import kotlin.system.exitProcess
 
 
 open class App : Application() {
@@ -38,6 +41,12 @@ open class App : Application() {
         ThemeEngine.applyToActivities(this)
         //设置语言
         LocaleDelegate.defaultLocale = getLocale()
+
+        //没激活不给进
+        if(!HookUtils.getActiveAndSupportFramework()){
+            Toast.makeText(applicationContext,R.string.active_error,Toast.LENGTH_LONG).show()
+            exitProcess(0)
+        }
 
         //匿名统计
         if(SpUtils.getBoolean("app_center_analyze",true)){
