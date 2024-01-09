@@ -11,7 +11,7 @@ const val NAME = "config"
 @SuppressLint("StaticFieldLeak")
 val context = App.context
 
-val sp: SharedPreferences = context.getSharedPreferences(NAME, Context.MODE_WORLD_READABLE)
+val sp: SharedPreferences = context.getSharedPreferences(NAME, if(HookUtils.getActiveAndSupportFramework())Context.MODE_WORLD_READABLE else Context.MODE_PRIVATE)
 
 object SpUtils {
     fun putBoolean(key: String,value:Boolean) = sp.edit().putBoolean(key, value).apply()
