@@ -13,11 +13,26 @@ If your Lsposed supports an API level **lower than 93**, you will not be able to
 
 ## Usage
 
-1. Download the latest version from [Release](https://github.com/dreamncn/bluetooth/releases) and install it on the phone.
+### Mock bluetooth
+
+1. Download the latest version from [Release](https://github.com/AnkioTomas/bluetooth/releases) and install it on the phone.
 2. Activate and check `com.android.bluetooth` in Lsposed.
-2. Search for Bluetooth on the homepage and select the Bluetooth device you want to emulate.
-2. Return to the homepage and click "simulate" to start.
-2. Enjoy it :)
+3. Search for Bluetooth on the homepage and select the Bluetooth device you want to emulate.
+4. Return to the homepage and click "simulate" to start.
+5. Enjoy it :)
+
+### Sync by Webdav
+
+#### As Sender
+
+1. Enter your webdav account information.
+2. Choose either Mac address or company name.
+3. Click to enable synchronization and serve as the sender.
+
+#### As Receiver
+
+1. Enter your webdav account information.
+2. Click to enable synchronization
 
 ##  Contribute to the project
 
