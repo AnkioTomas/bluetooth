@@ -2,6 +2,7 @@ package net.ankio.bluetooth.utils
 
 
 import android.util.Log
+import android.widget.Toast
 import com.google.gson.Gson
 import com.thegrizzlylabs.sardineandroid.Sardine
 import com.thegrizzlylabs.sardineandroid.impl.OkHttpSardine
@@ -23,10 +24,10 @@ class WebdavUtils(username:String,password:String) {
     private var dir = server +   "/bluetooth".trimEnd('/')
     private var file = "$dir/bluetooth.json"
     init {
-        sardine.setCredentials(username,password)
-        if (!sardine.exists(dir)) {
-            sardine.createDirectory(dir)
-        }
+          sardine.setCredentials(username,password)
+          if (!sardine.exists(dir)) {
+              sardine.createDirectory(dir)
+          }
     }
 
     fun sendToServer(bluetoothData: BluetoothData) {

@@ -70,4 +70,5 @@
     <string name="active_version">Sorry, we don\'t support frameworks with API version lower than 93. Please update Lsposed to the latest version.</string>
     <string name="manual_increase">Manual Increase</string>
     <string name="hide_icon">Hide icon from launcher</string>
+    <string name="company_data">Company Name</string>
 </resources>
