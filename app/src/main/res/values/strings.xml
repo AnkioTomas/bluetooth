@@ -34,7 +34,7 @@
     <string name="setting_privacy">Privacy</string>
     <string name="setting_analysis">Anonymous analysis</string>
     <string name="setting_analysis_desc">We use Flurry to collect crash information</string>
-    <string name="translation_url" translatable="false">https://github.com/dreamncn/bluetooth</string>
+    <string name="translation_url" translatable="false">https://github.com/AnkioTomas/bluetooth</string>
     <string name="ok">OK</string>
     <string name="dialog_cannot_open_browser_title">Can\\\'t start browser</string>
     <string name="toast_copied_to_clipboard_with_text"><![CDATA[<b>%s</b> has been copied to clipboard.]]></string>
