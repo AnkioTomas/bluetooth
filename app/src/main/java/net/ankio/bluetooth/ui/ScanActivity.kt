@@ -5,7 +5,9 @@ import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -19,12 +21,14 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.marginBottom
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.chad.library.adapter.base.BaseQuickAdapter.AnimationType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.permissionx.guolindev.PermissionX
 import com.zackratos.ultimatebarx.ultimatebarx.navigationBarHeight
+import kotlinx.coroutines.launch
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.adapter.BleDeviceAdapter
 import net.ankio.bluetooth.bluetooth.BleDevice
@@ -80,19 +84,26 @@ class ScanActivity : BaseActivity() {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val scanRecord = result.scanRecord?.bytes ?: return
-            val companyName = BluetoothData(this@ScanActivity).parseManufacturerData(scanRecord)
-            //   val companyName = BluetoothCompanyParser(this@ScanActivity).getCompanyName(manufacturerId)
-            val name = result.device.name
-            //   name+= if(TextUtils.isEmpty(companyName))"None" else companyName
-            addDeviceList(
-                BleDevice(
-                    ByteUtils.byteArrayToHexString(scanRecord),
-                    if (TextUtils.isEmpty(companyName)) "None" else companyName,
-                    result.rssi,
-                    result.device.address,
-                    if (TextUtils.isEmpty(name)) "None" else name
+
+
+            lifecycleScope.launch {
+                val companyName = BluetoothData(this@ScanActivity).parseManufacturerData(scanRecord)
+                //   val companyName = BluetoothCompanyParser(this@ScanActivity).getCompanyName(manufacturerId)
+                val name = result.device.name
+
+                //   name+= if(TextUtils.isEmpty(companyName))"None" else companyName
+                addDeviceList(
+                    BleDevice(
+                        ByteUtils.byteArrayToHexString(scanRecord),
+                        if (TextUtils.isEmpty(companyName)) "None" else companyName,
+                        result.rssi,
+                        result.device.address,
+                        if (TextUtils.isEmpty(name)) "None" else name
+                    )
                 )
-            )
+            }
+
+
         }
     }
 
@@ -276,6 +287,9 @@ class ScanActivity : BaseActivity() {
         isScanning = true
         addressList.clear()
         mList.clear()
+
+
+
         try{
             defaultAdapter.bluetoothLeScanner.startScan(scanCallback)
         }catch (_:SecurityException){
