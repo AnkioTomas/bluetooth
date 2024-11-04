@@ -101,21 +101,38 @@ class Main : IXposedHookLoadPackage {
             )
 
             try {
-                XposedHelpers.callMethod(__param.thisObject, "onScanResult", *params)
+                XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper")
+                val mTransitionalScanHelper = XposedHelpers.callMethod(
+                    __param.thisObject,
+                    "getTransitionalScanHelper"
+                )
+                callMethodOnScanResult(mTransitionalScanHelper, params)
             } catch (e: NoSuchMethodError) {
-                try {
-                    XposedHelpers.callMethod(__param.thisObject, "onScanResult", *params.copyOf(params.size - 1))
-                } catch (e: NoSuchMethodError) {
-                    // 处理最终的异常情况
-                    XposedBridge.log("${__main.tag} 您的设备不支持，请提取com.android.bluetooth文件提交至github")
-                    XposedBridge.log("${__main.tag} 异常：${e.message}" )
-                    return
-                }
+                XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper 失败, 回退解析 GattService")
+                callMethodOnScanResult(__param.thisObject, params)
             }
-
 
             XposedBridge.log("${__main.tag} mock => $mac")
             __handler.postDelayed(this, 500)
+        }
+
+        private fun callMethodOnScanResult(thisObject: Any, params: Array<Serializable>) {
+            try {
+                XposedHelpers.callMethod(thisObject, "onScanResult", *params)
+            } catch (e: NoSuchMethodError) {
+                try {
+                    XposedHelpers.callMethod(
+                        thisObject,
+                        "onScanResult",
+                        *params.copyOf(params.size - 1)
+                    )
+                } catch (e: NoSuchMethodError) {
+                    // 处理最终的异常情况
+                    XposedBridge.log("${__main.tag} 您的设备不支持，请提取com.android.bluetooth文件提交至github")
+                    XposedBridge.log("${__main.tag} 异常：${e.message}")
+                    return
+                }
+            }
         }
     }
 
