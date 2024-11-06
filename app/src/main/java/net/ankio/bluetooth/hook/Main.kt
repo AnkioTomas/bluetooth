@@ -7,6 +7,7 @@ import android.os.Looper
 import de.robv.android.xposed.*
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import net.ankio.bluetooth.utils.ByteUtils
+import java.io.Serializable
 
 
 class Main : IXposedHookLoadPackage {
