@@ -4,7 +4,11 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import de.robv.android.xposed.*
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XSharedPreferences
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import net.ankio.bluetooth.utils.ByteUtils
 import java.io.Serializable
@@ -19,23 +23,36 @@ class Main : IXposedHookLoadPackage {
     }
 
 
-
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
         XposedBridge.log("$tag lpparam.packageName")
         if (lpparam == null || !lpparam.packageName.equals("com.android.bluetooth")) return
 
-
-
         XposedBridge.log("$tag 蓝牙模拟启动")
         reload()
-        if(!pref.getBoolean("pref_enable",false)){
+        if (!pref.getBoolean("pref_enable", false)) {
             XposedBridge.log("$tag 关闭蓝牙模拟功能")
             return
         }
-        val cClass = XposedHelpers.findClass("com.android.bluetooth.gatt.GattService", lpparam.classLoader)
+        val cClass =
+            XposedHelpers.findClass("com.android.bluetooth.gatt.GattService", lpparam.classLoader)
         val main = this
         XposedBridge.log("$tag class:$cClass")
-        XposedHelpers.findAndHookMethod(cClass, "start", object : XC_MethodHook() {
+        try {
+            // OS <= Android 15
+            hookLifecycleMethods(cClass, "start", "stop", main)
+        } catch (e: NoSuchMethodError) {
+            // OS = Android 16
+            hookLifecycleMethods(cClass, "initMiFeature", "cleanup", main)
+        }
+    }
+
+    private fun reload() {
+        if (pref.hasFileChanged()) pref.reload()
+    }
+
+    private fun hookLifecycleMethods(cClass: Class<*>, startMethodName: String, stopMethodName: String, main: Main) {
+        // Hook启动方法
+        XposedHelpers.findAndHookMethod(cClass, startMethodName, object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 var hAdditionalI: Handler?
                 val str = "handler"
@@ -46,31 +63,32 @@ class Main : IXposedHookLoadPackage {
                 }
                 XposedHelpers.setAdditionalInstanceField(param.thisObject, str, hAdditionalI)
                 val broadcast = BroadcastBluetooth(param, main, hAdditionalI)
-                XposedHelpers.setAdditionalInstanceField(param.thisObject, "runnable", broadcast)
+                XposedHelpers.setAdditionalInstanceField(
+                    param.thisObject,
+                    "runnable",
+                    broadcast
+                )
                 hAdditionalI.postDelayed(broadcast, 500)
                 return
             }
-            override fun beforeHookedMethod(param: MethodHookParam) {}
         })
-        XposedHelpers.findAndHookMethod(cClass, "stop", object : XC_MethodHook() {
+
+        // Hook停止方法
+        XposedHelpers.findAndHookMethod(cClass, stopMethodName, object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                val oAdditionalI = XposedHelpers.getAdditionalInstanceField(param.thisObject, "handler")
+                val oAdditionalI =
+                    XposedHelpers.getAdditionalInstanceField(param.thisObject, "handler")
                 if (oAdditionalI !is Handler) {
                     return
                 }
-                val oAdditionalI1 = XposedHelpers.getAdditionalInstanceField(param.thisObject, "runnable")
+                val oAdditionalI1 =
+                    XposedHelpers.getAdditionalInstanceField(param.thisObject, "runnable")
                 if (oAdditionalI1 !is Runnable) {
                     return
                 }
                 oAdditionalI.removeCallbacks(oAdditionalI1)
             }
         })
-
-
-    }
-
-    private fun reload() {
-        if (pref.hasFileChanged()) pref.reload()
     }
 
     class BroadcastBluetooth(param: XC_MethodHook.MethodHookParam, main: Main, handler: Handler) :
@@ -78,6 +96,7 @@ class Main : IXposedHookLoadPackage {
         private var __main = main
         private var __param = param
         private var __handler = handler
+
         @SuppressLint("SuspiciousIndentation")
         override fun run() {
             val mac = __main.getString("pref_mac", "76:A7:8A:67:66:C9")
@@ -102,15 +121,24 @@ class Main : IXposedHookLoadPackage {
             )
 
             try {
-                XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper")
+                XposedBridge.log("${__main.tag} 解析方法: getScanController")
                 val mTransitionalScanHelper = XposedHelpers.callMethod(
                     __param.thisObject,
-                    "getTransitionalScanHelper"
+                    "getScanController"
                 )
                 callMethodOnScanResult(mTransitionalScanHelper, params)
             } catch (e: NoSuchMethodError) {
-                XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper 失败, 回退解析 GattService")
-                callMethodOnScanResult(__param.thisObject, params)
+                try {
+                    XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper")
+                    val mTransitionalScanHelper = XposedHelpers.callMethod(
+                        __param.thisObject,
+                        "getTransitionalScanHelper"
+                    )
+                    callMethodOnScanResult(mTransitionalScanHelper, params)
+                } catch (e: NoSuchMethodError) {
+                    XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper 失败, 回退解析 GattService")
+                    callMethodOnScanResult(__param.thisObject, params)
+                }
             }
 
             XposedBridge.log("${__main.tag} mock => $mac")
