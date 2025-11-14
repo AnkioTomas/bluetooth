@@ -327,10 +327,4 @@ class ScanActivity : BaseActivity() {
         }
     }
 
-
-    /**
-     * Toast提示
-     */
-    private fun showMsg(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-
 }

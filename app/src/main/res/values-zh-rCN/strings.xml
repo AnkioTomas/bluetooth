@@ -68,4 +68,10 @@
     <string name="manual_increase">手动增加</string>
     <string name="hide_icon">从桌面启动器隐藏应用图标</string>
     <string name="company_data">公司名称</string>
+    <string name="hook_log_title">Hook调试日志</string>
+    <string name="hook_log_desc">启用Hook调试日志用于问题排查</string>
+    <string name="ble_advertiser_title">BLE外围服务</string>
+    <string name="ble_advertiser_desc">作为BLE外围设备广播模拟数据</string>
+    <string name="ble_advertiser_active">正在作为BLE设备广播</string>
+    <string name="ble_advertiser_inactive">BLE外围服务已关闭</string>
 </resources>

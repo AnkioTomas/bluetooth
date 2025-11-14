@@ -17,6 +17,7 @@ import net.ankio.bluetooth.BuildConfig
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.databinding.SettingsActivityBinding
 import net.ankio.bluetooth.utils.CustomTabsHelper
+import net.ankio.bluetooth.utils.HookLogManager
 import net.ankio.bluetooth.utils.LocaleDelegate
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.utils.LangList
@@ -186,6 +187,24 @@ class SettingsActivity : BaseActivity() {
              setHideIcon(binding.hideIconSwitch.isChecked )
          }
          binding.hideIconSwitch.setOnCheckedChangeListener { _, isChecked ->  setHideIcon(isChecked ) }
+
+        // Hook日志开关设置
+        SpUtils.getBoolean("pref_hook_log_enabled", false).apply {
+            binding.hookLogSwitch.isChecked = this
+        }
+
+        fun setHookLogEnabled(isChecked: Boolean) {
+            SpUtils.putBoolean("pref_hook_log_enabled", isChecked)
+        }
+
+        binding.hookLogSetting.setOnClickListener {
+            binding.hookLogSwitch.isChecked = !binding.hookLogSwitch.isChecked
+            setHookLogEnabled(binding.hookLogSwitch.isChecked)
+        }
+
+        binding.hookLogSwitch.setOnCheckedChangeListener { _, isChecked ->
+            setHookLogEnabled(isChecked)
+        }
 
      }
 

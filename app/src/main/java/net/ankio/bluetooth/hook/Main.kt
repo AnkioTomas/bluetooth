@@ -1,22 +1,21 @@
 package net.ankio.bluetooth.hook
 
 import android.annotation.SuppressLint
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XSharedPreferences
-import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import net.ankio.bluetooth.utils.ByteUtils
+import net.ankio.bluetooth.utils.HookLogManager
 import java.io.Serializable
 
 
 class Main : IXposedHookLoadPackage {
     private val pref: XSharedPreferences = XSharedPreferences("net.ankio.bluetooth", "config")
-    private val tag = "AnkioのBluetooth :"
+    private val tag = "AnkioのBluetooth"
     fun getString(key: String, value: String?): String {
         reload()
         return pref.getString(key, value) ?: ""
@@ -24,19 +23,19 @@ class Main : IXposedHookLoadPackage {
 
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
-        XposedBridge.log("$tag lpparam.packageName")
+        HookLogManager.d(tag, "lpparam.packageName: ${lpparam?.packageName}")
         if (lpparam == null || !lpparam.packageName.equals("com.android.bluetooth")) return
 
-        XposedBridge.log("$tag 蓝牙模拟启动")
+        HookLogManager.d(tag, "蓝牙模拟启动")
         reload()
         if (!pref.getBoolean("pref_enable", false)) {
-            XposedBridge.log("$tag 关闭蓝牙模拟功能")
+            HookLogManager.d(tag, "关闭蓝牙模拟功能")
             return
         }
         val cClass =
             XposedHelpers.findClass("com.android.bluetooth.gatt.GattService", lpparam.classLoader)
         val main = this
-        XposedBridge.log("$tag class:$cClass")
+        HookLogManager.d(tag, "class: $cClass")
         try {
             // OS <= Android 15
             hookLifecycleMethods(cClass, "start", "stop", main)
@@ -47,7 +46,11 @@ class Main : IXposedHookLoadPackage {
     }
 
     private fun reload() {
-        if (pref.hasFileChanged()) pref.reload()
+        if (pref.hasFileChanged()) {
+            pref.reload()
+            // 重载Hook日志管理器配置
+            HookLogManager.reloadConfig()
+        }
     }
 
     private fun hookLifecycleMethods(cClass: Class<*>, startMethodName: String, stopMethodName: String, main: Main) {
@@ -121,7 +124,7 @@ class Main : IXposedHookLoadPackage {
             )
 
             try {
-                XposedBridge.log("${__main.tag} 解析方法: getScanController")
+                HookLogManager.d(__main.tag, "解析方法: getScanController")
                 val mTransitionalScanHelper = XposedHelpers.callMethod(
                     __param.thisObject,
                     "getScanController"
@@ -129,19 +132,19 @@ class Main : IXposedHookLoadPackage {
                 callMethodOnScanResult(mTransitionalScanHelper, params)
             } catch (e: NoSuchMethodError) {
                 try {
-                    XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper")
+                    HookLogManager.d(__main.tag, "解析方法: getTransitionalScanHelper")
                     val mTransitionalScanHelper = XposedHelpers.callMethod(
                         __param.thisObject,
                         "getTransitionalScanHelper"
                     )
                     callMethodOnScanResult(mTransitionalScanHelper, params)
                 } catch (e: NoSuchMethodError) {
-                    XposedBridge.log("${__main.tag} 解析方法: getTransitionalScanHelper 失败, 回退解析 GattService")
+                    HookLogManager.d(__main.tag, "解析方法: getTransitionalScanHelper 失败, 回退解析 GattService")
                     callMethodOnScanResult(__param.thisObject, params)
                 }
             }
 
-            XposedBridge.log("${__main.tag} mock => $mac")
+            HookLogManager.d(__main.tag, "mock => $mac")
             __handler.postDelayed(this, 500)
         }
 
@@ -157,8 +160,8 @@ class Main : IXposedHookLoadPackage {
                     )
                 } catch (e: NoSuchMethodError) {
                     // 处理最终的异常情况
-                    XposedBridge.log("${__main.tag} 您的设备不支持，请提取com.android.bluetooth文件提交至github")
-                    XposedBridge.log("${__main.tag} 异常：${e.message}")
+                    HookLogManager.e(__main.tag, "您的设备不支持，请提取com.android.bluetooth文件提交至github")
+                    HookLogManager.e(__main.tag, "异常：${e.message}", e)
                     return
                 }
             }

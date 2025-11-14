@@ -169,4 +169,15 @@ open class BaseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 显示信息
+     */
+    fun showMsg(message: String) {
+        try {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+
+        }
+    }
+
 }

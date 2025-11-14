@@ -9,4 +9,5 @@
 .cxx
 local.properties
 /app/build
-
+/app/release
+back_bluetooth_jar

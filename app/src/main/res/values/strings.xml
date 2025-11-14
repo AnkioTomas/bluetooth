@@ -71,4 +71,10 @@
     <string name="manual_increase">Manual Increase</string>
     <string name="hide_icon">Hide icon from launcher</string>
     <string name="company_data">Company Name</string>
+    <string name="hook_log_title">Hook debug logs</string>
+    <string name="hook_log_desc">Enable Hook debug logs for troubleshooting</string>
+    <string name="ble_advertiser_title">BLE Peripheral Service</string>
+    <string name="ble_advertiser_desc">Broadcast as a BLE peripheral device with simulated data</string>
+    <string name="ble_advertiser_active">Broadcasting as BLE device</string>
+    <string name="ble_advertiser_inactive">BLE peripheral service disabled</string>
 </resources>
