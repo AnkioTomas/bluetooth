@@ -6,6 +6,7 @@ import android.text.TextUtils
 import net.ankio.bluetooth.ui.BaseActivity
 
 import java.util.Locale
+import androidx.core.text.layoutDirection
 
 class LocaleDelegate {
 
@@ -40,7 +41,7 @@ class LocaleDelegate {
      * @param activity Activity
      */
     fun onCreate(activity: Activity) {
-        activity.window.decorView.layoutDirection = TextUtils.getLayoutDirectionFromLocale(locale)
+        activity.window.decorView.layoutDirection = locale.layoutDirection
     }
 
     companion object {

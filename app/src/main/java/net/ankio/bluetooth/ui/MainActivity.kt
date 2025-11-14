@@ -15,8 +15,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
-import androidx.core.widget.addTextChangedListener
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -30,9 +28,7 @@ import net.ankio.bluetooth.R
 import net.ankio.bluetooth.bluetooth.BleDevice
 import net.ankio.bluetooth.databinding.AboutDialogBinding
 import net.ankio.bluetooth.databinding.ActivityMainBinding
-import net.ankio.bluetooth.databinding.InputLayoutBinding
 import net.ankio.bluetooth.service.SendWebdavServer
-import net.ankio.bluetooth.utils.BleConstant
 import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
@@ -218,11 +214,11 @@ class MainActivity : BaseActivity() {
         if(localHistoryList==null){
             localHistoryList = ArrayList()
         }
-       val pref_data =  SpUtils.getString("pref_data", "")
-        val pref_mac =   SpUtils.getString("pref_mac", "")
-        val pref_rssi =  SpUtils.getString("pref_rssi", "-50")
+        val pref_data = SpUtils.getString("pref_data", "")
+        val pref_mac = SpUtils.getString("pref_mac", "")
+        val pref_rssi = SpUtils.getString("pref_rssi", "-50")
         var value = pref_rssi
-        if(value==null||value=="")value="0"
+        if (value == "") value = "-50" // 默认值应该是-50，不是0
         var insert = false
         var saveHistory = ArrayList<BleDevice>()
         localHistoryList.forEach {
@@ -292,12 +288,26 @@ class MainActivity : BaseActivity() {
         }
         SpUtils.getString("pref_rssi", "-50").apply {
             var value = this
-            if(value=="")value="0"
-            binding.signalLabel.value = -value.toFloat()
-            binding.tvRssi.text =  value + " dBm"
-            binding.signalLabel.addOnChangeListener { _, value, _ ->
-                binding.tvRssi.text = "-" + value.toInt().toString() + " dBm"
-                SpUtils.putString("pref_rssi", "-" + value.toInt().toString())
+            if (value == "") value = "-50"
+
+            val rssiValue = value.toIntOrNull() ?: -50
+            val sliderValue = when {
+                rssiValue >= 0 -> 100f  // 0 dBm = 100
+                rssiValue <= -100 -> 0f  // -100 dBm = 0
+                else -> (100 + rssiValue).toFloat() // -50 dBm = 50
+            }
+
+            binding.signalLabel.value = sliderValue
+            binding.tvRssi.text = "$value dBm"
+
+            binding.signalLabel.addOnChangeListener { _, sliderValue, _ ->
+                val newRssi = when {
+                    sliderValue >= 100 -> 0
+                    sliderValue <= 0 -> -100
+                    else -> (sliderValue - 100).toInt()
+                }
+                binding.tvRssi.text = "$newRssi dBm"
+                SpUtils.putString("pref_rssi", newRssi.toString())
                 saveToLocal()
             }
 
