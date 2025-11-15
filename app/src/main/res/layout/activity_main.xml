@@ -267,6 +267,76 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/ble_advertiser_panel"
+                style="?attr/materialCardViewElevatedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/padding"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:cardElevation="0dp"
+                app:cardMaxElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/padding"
+                    android:orientation="vertical">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="@dimen/padding">
+
+                        <TextView
+                            android:id="@+id/ble_advertiser_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginEnd="@dimen/padding"
+                            android:layout_toStartOf="@+id/ble_advertiser_switch"
+                            android:text="@string/ble_advertiser_title"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/ble_advertiser_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/switch_width"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginEnd="@dimen/padding"
+                            tools:ignore="UseSwitchCompatOrMaterialXml" />
+
+                    </RelativeLayout>
+
+                    <TextView
+                        android:id="@+id/ble_advertiser_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/padding"
+                        android:layout_marginEnd="@dimen/padding"
+                        android:layout_marginBottom="@dimen/padding"
+                        android:text="@string/ble_advertiser_inactive"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                        android:textColor="?attr/colorOutline" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/padding"
+                        android:layout_marginEnd="@dimen/padding"
+                        android:layout_marginBottom="@dimen/padding"
+                        android:text="@string/ble_advertiser_desc"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                        android:textColor="?attr/colorOutline" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/webdav_panel"
                 style="?attr/materialCardViewElevatedStyle"
                 android:layout_width="match_parent"

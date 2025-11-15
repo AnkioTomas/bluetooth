@@ -35,6 +35,11 @@
             android:name=".service.SendWebdavServer"
             android:enabled="true"
             android:exported="true" />
+        <service
+            android:name=".service.BleAdvertiserService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <activity
             android:name=".ui.ScanActivity"
