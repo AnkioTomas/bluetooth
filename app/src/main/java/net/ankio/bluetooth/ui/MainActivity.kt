@@ -2,6 +2,7 @@ package net.ankio.bluetooth.ui
 
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,11 +10,14 @@ import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.widget.Toast
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
@@ -21,6 +25,8 @@ import com.google.gson.reflect.TypeToken
 import com.thegrizzlylabs.sardineandroid.impl.SardineException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.ankio.bluetooth.BuildConfig
@@ -29,6 +35,8 @@ import net.ankio.bluetooth.bluetooth.BleDevice
 import net.ankio.bluetooth.databinding.AboutDialogBinding
 import net.ankio.bluetooth.databinding.ActivityMainBinding
 import net.ankio.bluetooth.service.SendWebdavServer
+import net.ankio.bluetooth.utils.BleAdvertiserManager
+import net.ankio.bluetooth.utils.ClipboardUtils
 import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
@@ -42,6 +50,12 @@ class MainActivity : BaseActivity() {
     //视图绑定
     private lateinit var binding: ActivityMainBinding
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+    // BLE广播相关
+    private var bleEventReceiver: BroadcastReceiver? = null
+    private var bleCountdownJob: Job? = null
+    private var lastToastMessage = "" // 避免重复Toast
+    private var lastToastTime = 0L
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         tag = "MainActivity"
@@ -51,6 +65,7 @@ class MainActivity : BaseActivity() {
         toolbar = binding.toolbar
         scrollView = binding.scrollView
 
+        
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.theme -> {
@@ -153,10 +168,63 @@ class MainActivity : BaseActivity() {
     }
     override fun onResume() {
         super.onResume()
-        setMacBluetoothData()
-        serverConnect()
+
+        // 延迟状态刷新，减少频率
+        coroutineScope.launch {
+            delay(500) // 延迟500ms再刷新状态
+            setMacBluetoothData()
+            serverConnect()
+            refreshStatus()
+
+            // 延迟刷新BLE状态，避免过频繁更新
+            delay(200)
+            runOnUiThread {
+                updateBleAdvertiserStatus(BleAdvertiserManager.ServiceState.isEnabled(this@MainActivity))
+            }
+        }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // 清理BLE事件接收器
+        bleEventReceiver?.let { receiver ->
+            BleAdvertiserManager.unregisterEventReceiver(this, receiver)
+        }
+        bleEventReceiver = null
+
+        
+        // 停止倒计时
+        stopBleCountdown()
+    }
+
+    /**
+     * 启动BLE倒计时（6分钟）
+     */
+    private fun startBleCountdown() {
+        stopBleCountdown() // 先停止之前的倒计时
+
+        bleCountdownJob = coroutineScope.launch {
+            delay(6 * 60 * 1000L) // 6分钟
+
+            // 6分钟后自动停止
+            if (BleAdvertiserManager.ServiceState.isEnabled(this@MainActivity)) {
+                Log.i(tag, "6分钟倒计时结束，自动停止BLE广播")
+                binding.bleAdvertiserSwitch.isChecked = false
+                stopBleAdvertising()
+                showToast("外围服务运行时间已到，已自动停止")
+            }
+        }
+    }
+
+    /**
+     * 停止BLE倒计时
+     */
+    private fun stopBleCountdown() {
+        bleCountdownJob?.cancel()
+        bleCountdownJob = null
+    }
+
+    
     /**
      * 启动服务
      */
@@ -455,6 +523,296 @@ class MainActivity : BaseActivity() {
             binding.lastDate.text = this
         }
 
+        initBleAdvertiser()
+    }
+
+    /**
+     * 初始化BLE广播器
+     */
+    private fun initBleAdvertiser() {
+        try {
+            val compatibility = BleAdvertiserManager.checkCompatibility(this)
+            if (!compatibility.isCompatible) {
+                Log.w(tag, "设备不支持BLE广播")
+                binding.bleAdvertiserPanel.visibility = View.GONE
+                return
+            }
+
+            setupBleAdvertiserUI()
+            registerBleEventReceiver()
+            Log.d(tag, "BLE广播器初始化完成")
+        } catch (e: Exception) {
+            Log.e(tag, "BLE广播器初始化失败", e)
+            binding.bleAdvertiserPanel.visibility = View.GONE
+        }
+    }
+
+    /**
+     * 设置BLE广播UI
+     */
+    private fun setupBleAdvertiserUI() {
+        val isEnabled = BleAdvertiserManager.ServiceState.isEnabled(this)
+
+        binding.bleAdvertiserSwitch.setOnCheckedChangeListener { _, isChecked ->
+            onBleSwitchChanged(isChecked)
+        }
+
+        binding.bleAdvertiserSwitch.setOnCheckedChangeListener(null)
+        binding.bleAdvertiserSwitch.isChecked = isEnabled
+        binding.bleAdvertiserSwitch.setOnCheckedChangeListener { _, isChecked ->
+            onBleSwitchChanged(isChecked)
+        }
+
+        updateBleAdvertiserStatus(isEnabled)
+
+        binding.bleAdvertiserPanel.setOnClickListener {
+            binding.bleAdvertiserSwitch.isChecked = !binding.bleAdvertiserSwitch.isChecked
+        }
+
+        binding.bleAdvertiserPanel.setOnLongClickListener {
+            showBleDebugInfo()
+            true
+        }
+    }
+
+    /**
+     * 注册BLE事件广播接收器
+     */
+    private fun registerBleEventReceiver() {
+        bleEventReceiver = BleAdvertiserManager.registerEventReceiver(this) { event, message ->
+            runOnUiThread {
+                handleBleEvent(event, message)
+            }
+        }
+    }
+
+    
+    /**
+     * 处理BLE事件
+     */
+    private fun handleBleEvent(event: String, message: String?) {
+        Log.d(tag, "处理BLE事件: $event")
+
+        when (event) {
+            "STARTED" -> {
+                startBleCountdown()
+                updateBleAdvertiserStatus(true)
+                binding.bleAdvertiserSwitch.isChecked = true
+                showToast("BLE广播启动成功（6分钟自动关闭）")
+            }
+            "STOPPED" -> {
+                stopBleCountdown()
+                updateBleAdvertiserStatus(false)
+                binding.bleAdvertiserSwitch.isChecked = false
+            }
+            "FAILED", "EXCEPTION", "BLUETOOTH_DISABLED", "DEVICE_NOT_SUPPORTED", "PERMISSION_DENIED" -> {
+                stopBleCountdown()
+                binding.bleAdvertiserSwitch.isChecked = false
+                updateBleAdvertiserStatus(false)
+                showToast(message ?: "BLE广播操作失败")
+            }
+        }
+    }
+
+    /**
+     * BLE开关变化处理
+     */
+    private fun onBleSwitchChanged(enable: Boolean) {
+        val currentState = BleAdvertiserManager.ServiceState.isEnabled(this)
+
+        if (currentState != enable) {
+            Log.d(tag, "BLE开关状态变化: $currentState -> $enable")
+            if (enable) {
+                startBleAdvertising()
+            } else {
+                stopBleAdvertising()
+            }
+        } else {
+            Log.d(tag, "BLE开关状态未变化，跳过操作: $enable")
+        }
+    }
+
+    /**
+     * 处理BLE广播开关切换
+     */
+    private fun handleBleAdvertiserToggle(enable: Boolean) {
+        if (enable) {
+            startBleAdvertising()
+        } else {
+            stopBleAdvertising()
+        }
+    }
+
+    /**
+     * 启动BLE广播
+     */
+    private fun startBleAdvertising() {
+        try {
+            if (!BleAdvertiserManager.hasRequiredPermissions(this)) {
+                requestBleAdvertiserPermissions()
+                binding.bleAdvertiserSwitch.isChecked = false
+                return
+            }
+
+            if (!BleAdvertiserManager.isBluetoothEnabled(this)) {
+                BleAdvertiserManager.requestEnableBluetooth(this)
+                binding.bleAdvertiserSwitch.isChecked = false
+                return
+            }
+            BleAdvertiserManager.startAdvertising(this)
+            Log.i(tag, "BLE广播启动请求已发送")
+        } catch (e: Exception) {
+            Log.e(tag, "启动BLE广播失败", e)
+            showToast("启动失败: ${e.message}")
+            binding.bleAdvertiserSwitch.isChecked = false
+        }
+    }
+
+    /**
+     * 停止BLE广播
+     */
+    private fun stopBleAdvertising() {
+        try {
+            stopBleCountdown()
+            BleAdvertiserManager.stopAdvertising(this)
+            Log.i(tag, "BLE广播停止请求已发送")
+        } catch (e: Exception) {
+            Log.e(tag, "停止BLE广播失败", e)
+            showToast("停止失败: ${e.message}")
+        }
+    }
+
+    /**
+     * 显示Toast消息
+     */
+    private fun showToast(message: String) {
+        val currentTime = System.currentTimeMillis()
+
+        if (message == lastToastMessage && currentTime - lastToastTime < 3000) {
+            Log.d(tag, "跳过重复Toast: $message")
+            return
+        }
+
+        lastToastMessage = message
+        lastToastTime = currentTime
+
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * 更新BLE广播状态显示
+     */
+    private fun updateBleAdvertiserStatus(isActive: Boolean) {
+        binding.bleAdvertiserStatus.text = if (isActive) {
+            getString(R.string.ble_advertiser_active)
+        } else {
+            getString(R.string.ble_advertiser_inactive)
+        }
+    }
+
+    /**
+     * 请求BLE广播权限
+     */
+    private fun requestBleAdvertiserPermissions() {
+        val missingPermissions = BleAdvertiserManager.getMissingPermissions(this)
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                missingPermissions,
+                BleAdvertiserManager.getPermissionRequestCode()
+            )
+        }
+    }
+
+    /**
+     * 处理权限请求结果
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == BleAdvertiserManager.getPermissionRequestCode()) {
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (allGranted) {
+                binding.bleAdvertiserSwitch.isChecked = true
+                handleBleAdvertiserToggle(true)
+            } else {
+                showMsg("BLE广播权限被拒绝，无法使用此功能")
+                binding.bleAdvertiserSwitch.isChecked = false
+            }
+        }
+    }
+
+    /**
+     * 处理蓝牙开启结果
+     */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == BleAdvertiserManager.getBluetoothEnableRequestCode()) {
+            if (resultCode == RESULT_OK) {
+                binding.bleAdvertiserSwitch.isChecked = true
+                handleBleAdvertiserToggle(true)
+            } else {
+                showMsg("蓝牙开启被拒绝，无法使用BLE广播功能")
+                binding.bleAdvertiserSwitch.isChecked = false
+            }
+        }
+    }
+
+    /**
+     * 显示BLE调试信息
+     */
+    private fun showBleDebugInfo() {
+        try {
+            val debugInfo = buildString {
+                appendLine("=== BLE广播调试信息 ===")
+
+                val compatibility = BleAdvertiserManager.checkCompatibility(this@MainActivity)
+                appendLine("兼容性: ${if (compatibility.isCompatible) "✅ 通过" else "❌ 失败"}")
+                appendLine("兼容性信息: ${compatibility.message}")
+
+                val hasPermissions = BleAdvertiserManager.hasRequiredPermissions(this@MainActivity)
+                appendLine("权限状态: ${if (hasPermissions) "✅ 完整" else "❌ 缺失"}")
+                if (!hasPermissions) {
+                    val missing = BleAdvertiserManager.getMissingPermissions(this@MainActivity)
+                    appendLine("缺失权限: ${missing.joinToString(", ")}")
+                }
+
+                val bluetoothEnabled = BleAdvertiserManager.isBluetoothEnabled(this@MainActivity)
+                appendLine("蓝牙状态: ${if (bluetoothEnabled) "✅ 已开启" else "❌ 已关闭"}")
+
+                val bleSupported = BleAdvertiserManager.isBleAdvertisingSupported(this@MainActivity)
+                appendLine("BLE广播支持: ${if (bleSupported) "✅ 支持" else "❌ 不支持"}")
+
+                val isEnabled = SpUtils.getBoolean("pref_ble_advertiser_enabled", false)
+                appendLine("广播开关: ${if (isEnabled) "✅ 已开启" else "❌ 已关闭"}")
+
+                val macAddress = SpUtils.getString("pref_mac", "未配置")
+                val broadcastData = SpUtils.getString("pref_data", "未配置")
+                appendLine("配置MAC: $macAddress")
+                appendLine("广播数据长度: ${broadcastData.length/2} 字节")
+
+                appendLine("Android版本: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
+                appendLine("设备支持BLE: ${packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)}")
+            }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("BLE广播调试信息")
+                .setMessage(debugInfo)
+                .setPositiveButton("确定", null)
+                .setNeutralButton("复制到剪贴板") { _, _ ->
+                    ClipboardUtils.put(this@MainActivity, debugInfo)
+                    Toast.makeText(this@MainActivity, "调试信息已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                }
+                .show()
+
+        } catch (e: Exception) {
+            Toast.makeText(this@MainActivity, "获取调试信息失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
 }
