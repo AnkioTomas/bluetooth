@@ -32,16 +32,17 @@ class Main : IXposedHookLoadPackage {
             HookLogManager.d(tag, "关闭蓝牙模拟功能")
             return
         }
-        val cClass =
-            XposedHelpers.findClass("com.android.bluetooth.gatt.GattService", lpparam.classLoader)
         val main = this
-        HookLogManager.d(tag, "class: $cClass")
         try {
             // OS <= Android 15
-            hookLifecycleMethods(cClass, "start", "stop", main)
+            hookLifecycleMethods(lpparam, "start", "stop", main)
         } catch (e: NoSuchMethodError) {
-            // OS = Android 16
-            hookLifecycleMethods(cClass, "initMiFeature", "cleanup", main)
+            try {
+                // OS = Android 16
+                hookLifecycleMethods(lpparam, "", "cleanup", main)
+            } catch (e: NoSuchMethodError) {
+                HookLogManager.e(tag, "您的设备不支持，请提取com.android.bluetooth文件提交至github")
+            }
         }
     }
 
@@ -53,9 +54,32 @@ class Main : IXposedHookLoadPackage {
         }
     }
 
-    private fun hookLifecycleMethods(cClass: Class<*>, startMethodName: String, stopMethodName: String, main: Main) {
+    private fun hookLifecycleMethods(
+        lpparam: XC_LoadPackage.LoadPackageParam,
+        startMethodName: String,
+        stopMethodName: String,
+        main: Main
+    ) {
+        val cClass = XposedHelpers.findClass("com.android.bluetooth.gatt.GattService", lpparam.classLoader)
+        val adapterServiceClass =
+            XposedHelpers.findClass("com.android.bluetooth.btservice.AdapterService", lpparam.classLoader)
+        HookLogManager.d(tag, "class: $cClass")
+
+        val startHook = createHookStartCallback(main)
+        val stopHook = createHookStopCallback(main)
         // Hook启动方法
-        XposedHelpers.findAndHookMethod(cClass, startMethodName, object : XC_MethodHook() {
+        if (startMethodName.isEmpty()) {
+            XposedHelpers.findAndHookConstructor(cClass, adapterServiceClass, startHook)
+        } else {
+            XposedHelpers.findAndHookMethod(cClass, startMethodName, startHook)
+        }
+
+        // Hook停止方法
+        XposedHelpers.findAndHookMethod(cClass, stopMethodName, stopHook)
+    }
+
+    private fun createHookStartCallback(main: Main): XC_MethodHook {
+        return object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 var hAdditionalI: Handler?
                 val str = "handler"
@@ -74,11 +98,12 @@ class Main : IXposedHookLoadPackage {
                 hAdditionalI.postDelayed(broadcast, 500)
                 return
             }
-        })
+        }
+    }
 
-        // Hook停止方法
-        XposedHelpers.findAndHookMethod(cClass, stopMethodName, object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+    private fun createHookStopCallback(main: Main): XC_MethodHook {
+        return object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
                 val oAdditionalI =
                     XposedHelpers.getAdditionalInstanceField(param.thisObject, "handler")
                 if (oAdditionalI !is Handler) {
@@ -91,7 +116,7 @@ class Main : IXposedHookLoadPackage {
                 }
                 oAdditionalI.removeCallbacks(oAdditionalI1)
             }
-        })
+        }
     }
 
     class BroadcastBluetooth(param: XC_MethodHook.MethodHookParam, main: Main, handler: Handler) :
