@@ -4,14 +4,11 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.text.TextUtils
-import android.widget.Toast
-import com.flurry.android.FlurryAgent
-import com.quickersilver.themeengine.ThemeEngine
-import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.LocaleDelegate
+import net.ankio.theme.ThemeSettings
+import net.ankio.theme.toast.ThemeToast
 import net.ankio.bluetooth.utils.SpUtils
 import java.util.*
-import kotlin.system.exitProcess
 
 
 open class App : Application() {
@@ -38,17 +35,9 @@ open class App : Application() {
     override fun onCreate() {
         super.onCreate()
         context = applicationContext
-        ThemeEngine.applyToActivities(this)
-        //设置语言
+        ThemeSettings.init(this)
+        ThemeToast.init(this)
         LocaleDelegate.defaultLocale = getLocale()
-
-        //匿名统计
-        if(SpUtils.getBoolean("app_center_analyze",true)){
-            FlurryAgent.Builder()
-                .withLogEnabled(true)
-                .build(this, "JS6H7TJJDMQRDDMWG55C")
-        }
-
     }
 
     override fun attachBaseContext(base: Context?) {

@@ -1,0 +1,410 @@
+package net.ankio.bluetooth.ui.compose
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import net.ankio.bluetooth.R
+import net.ankio.bluetooth.bluetooth.BleDevice
+import net.ankio.bluetooth.ui.compose.preview.PreviewSamples
+import net.ankio.bluetooth.utils.BleConstant.BleConstant
+import net.ankio.bluetooth.utils.SpUtils
+import net.ankio.bluetooth.viewmodel.ScanUiState
+import net.ankio.bluetooth.viewmodel.ScanViewModel
+import net.ankio.theme.PreviewAll
+import net.ankio.theme.PreviewAllThemes
+import net.ankio.theme.ThemePreviewConfig
+import net.ankio.theme.ThemePreviewParameterProvider
+import net.ankio.theme.AnkioTheme
+import net.ankio.theme.compat.ThemeCard
+import net.ankio.theme.compat.ThemeIcon
+import net.ankio.theme.compat.ThemeIconButton
+import net.ankio.theme.compat.ThemePrimaryButton
+import net.ankio.theme.compat.ThemeSlider
+import net.ankio.theme.compat.ThemeSwitch
+import net.ankio.theme.compat.ThemeText
+import net.ankio.theme.compat.ThemeTextField
+import net.ankio.theme.compat.ThemeTopAppBar
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ScanScreen(
+    viewModel: ScanViewModel,
+    onBack: () -> Unit,
+    onDeviceSelected: () -> Unit,
+    showBackButton: Boolean = true,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ScanScreenContent(
+        uiState = uiState,
+        onBack = onBack,
+        showBackButton = showBackButton,
+        onToggleScan = viewModel::toggleScan,
+        onOpenFilter = {
+            viewModel.stopScan()
+            viewModel.showFilterDialog(true)
+        },
+        onShowHistory = viewModel::showHistory,
+        onDeviceClick = { device ->
+            viewModel.selectDevice(device)
+            onDeviceSelected()
+        },
+        onDeviceLongClick = viewModel::removeDeviceAt,
+        onFilterDismiss = { wasScanning ->
+            viewModel.onFilterDismiss(wasScanning)
+        },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ScanScreenContent(
+    uiState: ScanUiState,
+    onBack: () -> Unit,
+    showBackButton: Boolean,
+    onToggleScan: () -> Unit,
+    onOpenFilter: () -> Unit,
+    onShowHistory: () -> Unit,
+    onDeviceClick: (BleDevice) -> Unit,
+    onDeviceLongClick: (Int) -> Unit,
+    onFilterDismiss: (Boolean) -> Unit,
+) {
+    var wasScanningBeforeFilter by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (showBackButton) {
+            ThemeTopAppBar(
+                title = stringResource(R.string.scan_blue),
+                modifier = Modifier.fillMaxWidth(),
+                navigationIcon = {
+                    ThemeIconButton(onClick = onBack) {
+                        ThemeIcon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = AnkioTheme.colorScheme.onSurface,
+                        )
+                    }
+                },
+                actions = {
+                    ScanTopBarActions(
+                        onOpenFilter = {
+                            wasScanningBeforeFilter = uiState.isScanning
+                            onOpenFilter()
+                        },
+                        onShowHistory = onShowHistory,
+                    )
+                },
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                ScanTopBarActions(
+                    onOpenFilter = {
+                        wasScanningBeforeFilter = uiState.isScanning
+                        onOpenFilter()
+                    },
+                    onShowHistory = onShowHistory,
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            ThemePrimaryButton(
+                onClick = onToggleScan,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                ThemeIcon(
+                    Icons.Default.Bluetooth,
+                    contentDescription = null,
+                    tint = AnkioTheme.colorScheme.onPrimary,
+                )
+                ThemeText(
+                    text = if (uiState.isScanning) {
+                        stringResource(R.string.stop_scan)
+                    } else {
+                        stringResource(R.string.start_scan)
+                    },
+                    style = AnkioTheme.textStyles.main,
+                    color = AnkioTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+
+            if (uiState.isScanning) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                    ThemeText(
+                        text = stringResource(R.string.start_scan),
+                        style = AnkioTheme.textStyles.main,
+                        color = AnkioTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            if (uiState.devices.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ThemeText(
+                        text = stringResource(R.string.ic_empty),
+                        style = AnkioTheme.textStyles.main,
+                        color = AnkioTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    itemsIndexed(uiState.devices, key = { _, item -> item.address }) { index, device ->
+                        BleDeviceItem(
+                            device = device,
+                            onClick = { onDeviceClick(device) },
+                            onLongClick = { onDeviceLongClick(index) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (uiState.showFilterDialog) {
+        FilterDialog(
+            onDismiss = {
+                onFilterDismiss(wasScanningBeforeFilter)
+            },
+        )
+    }
+}
+
+@PreviewAll
+@Composable
+private fun ScanScreenPreview(
+    @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
+) {
+    PreviewAllThemes(config) {
+        ScanScreenContent(
+            uiState = PreviewSamples.scanUiState,
+            onBack = {},
+            showBackButton = true,
+            onToggleScan = {},
+            onOpenFilter = {},
+            onShowHistory = {},
+            onDeviceClick = {},
+            onDeviceLongClick = {},
+            onFilterDismiss = {},
+        )
+    }
+}
+
+@PreviewAll
+@Composable
+private fun ScanScreenEmptyPreview(
+    @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
+) {
+    PreviewAllThemes(config) {
+        ScanScreenContent(
+            uiState = PreviewSamples.scanUiStateEmpty,
+            onBack = {},
+            showBackButton = true,
+            onToggleScan = {},
+            onOpenFilter = {},
+            onShowHistory = {},
+            onDeviceClick = {},
+            onDeviceLongClick = {},
+            onFilterDismiss = {},
+        )
+    }
+}
+
+@PreviewAll
+@Composable
+private fun FilterDialogPreview(
+    @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
+) {
+    PreviewAllThemes(config) {
+        FilterDialog(onDismiss = {})
+    }
+}
+
+@Composable
+private fun RowScope.ScanTopBarActions(
+    onOpenFilter: () -> Unit,
+    onShowHistory: () -> Unit,
+) {
+    ThemeIconButton(onClick = onOpenFilter) {
+        ThemeIcon(Icons.Default.FilterList, contentDescription = null, tint = AnkioTheme.colorScheme.onSurface)
+    }
+    ThemeIconButton(onClick = onShowHistory) {
+        ThemeIcon(Icons.Default.History, contentDescription = null, tint = AnkioTheme.colorScheme.onSurface)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BleDeviceItem(
+    device: BleDevice,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    ThemeCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ThemeIcon(
+                Icons.Default.Bluetooth,
+                contentDescription = null,
+                tint = AnkioTheme.colorScheme.primary,
+            )
+            Column(Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = device.company ?: "None",
+                        style = AnkioTheme.textStyles.title4,
+                        color = AnkioTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ThemeText(
+                        text = "${device.rssi} dBm",
+                        style = AnkioTheme.textStyles.footnote1,
+                        color = AnkioTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                ThemeText(
+                    text = device.address,
+                    style = AnkioTheme.textStyles.footnote1,
+                    color = AnkioTheme.colorScheme.onSurfaceVariant,
+                )
+                ThemeText(
+                    text = device.data,
+                    style = AnkioTheme.textStyles.footnote2,
+                    color = AnkioTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FilterDialog(onDismiss: () -> Unit) {
+    var filterEmptyName by remember { mutableStateOf(SpUtils.getBoolean(BleConstant.NULL_NAME)) }
+    var company by remember { mutableStateOf(SpUtils.getString(BleConstant.COMPANY, "")) }
+    var rssi by remember { mutableStateOf(SpUtils.getInt(BleConstant.RSSI, 100).toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.filter)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ThemeText(
+                        text = stringResource(R.string.filter_empty),
+                        style = AnkioTheme.textStyles.main,
+                        color = AnkioTheme.colorScheme.onSurface,
+                    )
+                    ThemeSwitch(
+                        checked = filterEmptyName,
+                        onCheckedChange = {
+                            filterEmptyName = it
+                            SpUtils.putBoolean(BleConstant.NULL_NAME, it)
+                        },
+                    )
+                }
+                ThemeText(
+                    text = stringResource(R.string.signal_filter),
+                    style = AnkioTheme.textStyles.main,
+                    color = AnkioTheme.colorScheme.onSurface,
+                )
+                ThemeText(
+                    text = "-${rssi.toInt()} dBm",
+                    style = AnkioTheme.textStyles.footnote1,
+                    color = AnkioTheme.colorScheme.onSurfaceVariant,
+                )
+                ThemeSlider(
+                    value = rssi,
+                    onValueChange = {
+                        rssi = it
+                        SpUtils.putInt(BleConstant.RSSI, it.toInt())
+                    },
+                    valueRange = 0f..100f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ThemeTextField(
+                    value = company,
+                    onValueChange = {
+                        company = it
+                        SpUtils.putString(BleConstant.COMPANY, it)
+                    },
+                    label = stringResource(R.string.company_filter),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.save_webdav))
+            }
+        },
+    )
+}
