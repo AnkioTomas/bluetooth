@@ -62,7 +62,7 @@ android {
 }
 
 dependencies {
-    def composeBom = platform('androidx.compose:compose-bom:2025.08.01')
+    def composeBom = platform('androidx.compose:compose-bom:2026.05.01')
 
     implementation composeBom
     androidTestImplementation composeBom
@@ -70,30 +70,29 @@ dependencies {
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.material:material-icons-extended'
-    implementation 'androidx.activity:activity-compose:1.12.4'
-    implementation 'androidx.activity:activity-ktx:1.12.4'
-    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
-    implementation 'androidx.navigation:navigation-compose:2.9.0'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.activity:activity-ktx:1.13.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.10.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0'
+    implementation 'androidx.navigation:navigation-compose:2.9.8'
 
     implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'com.google.android.material:material:1.14.0'
-    implementation 'com.github.AnkioTomas.theme:lib:1.0.0'
-    implementation 'androidx.browser:browser:1.5.0'
+    implementation 'com.github.AnkioTomas:theme:1.0.1'
+    implementation 'androidx.browser:browser:1.10.0'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    //Html转换
-    implementation 'dev.rikka.rikkax.html:html-ktx:1.1.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+
     //webdav
     implementation 'com.github.thegrizzlylabs:sardine-android:0.8'
     //webdav
     implementation 'com.google.code.gson:gson:2.10.1'
     //异步操作
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
     //权限请求 支持Androidx
-    implementation 'com.guolindev.permissionx:permissionx:1.7.1'
+    implementation 'com.guolindev.permissionx:permissionx:1.8.1'
     debugImplementation 'androidx.compose.ui:ui-tooling'
   // XposedLib
     implementation 'com.github.AnkioTomas.XposedLib:lib:1.0.1'

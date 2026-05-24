@@ -101,27 +101,4 @@ fun StatusBarPreview(
         )
     }
 
-    PreviewAllThemes(config) {
-        StatusBanner(
-            message = "操作成功",
-            kind = StatusKind.Success,
-            icon = androidx.compose.material.icons.Icons.Default.CheckCircle
-        )
-    }
-
-    PreviewAllThemes(config) {
-        StatusBanner(
-            message = "操作失败",
-            kind = StatusKind.Error,
-            icon = androidx.compose.material.icons.Icons.Default.Error
-        )
-    }
-
-    PreviewAllThemes(config) {
-        StatusBanner(
-            message = "警告信息",
-            kind = StatusKind.Warning,
-            icon = androidx.compose.material.icons.Icons.Default.Warning
-        )
-    }
 }

@@ -133,7 +133,7 @@ fun MainShellScaffold(
         }
 
         ThemeNavigationBar(
-            floating = ThemeSettings.navigationBarFloating,
+            floating = false,
         ) {
             AppTab.entries.forEach { tab ->
                 ThemeNavigationBarItem(

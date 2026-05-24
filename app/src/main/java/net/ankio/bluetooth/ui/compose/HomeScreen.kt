@@ -79,12 +79,6 @@ fun HomeScreenContent(
             }
         }
 
-        ThemeText(
-            text = stringResource(R.string.home_mode_hint),
-            style = AnkioTheme.textStyles.footnote1,
-            color = AnkioTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
-        )
     }
 }
 
