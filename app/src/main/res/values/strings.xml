@@ -86,6 +86,7 @@
     <string name="nav_history">History</string>
     <string name="scan_search">Search history</string>
     <string name="scan_filter">Filter</string>
+    <string name="toggle_scan">Scan</string>
     <string name="server_name">Bluetooth Webdav Service is working</string>
     <string name="server_error">Server not work</string>
     <string name="server_working">Server is working</string>
