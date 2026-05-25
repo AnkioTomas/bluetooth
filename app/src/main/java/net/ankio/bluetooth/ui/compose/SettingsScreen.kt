@@ -35,9 +35,11 @@ import net.ankio.bluetooth.App
 import net.ankio.bluetooth.BuildConfig
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ui.compose.components.SwitchRow
+import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.utils.CustomTabsHelper
 import net.ankio.bluetooth.utils.LocaleDelegate
 import net.ankio.bluetooth.utils.SpUtils
+import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.viewmodel.MainViewModel
 import net.ankio.theme.AnkioTheme
 import net.ankio.theme.PreviewAll
@@ -65,7 +67,7 @@ fun SettingsScreen(
 
     var hookLogEnabled by remember { mutableStateOf(SpUtils.getBoolean("pref_hook_log_enabled", false)) }
     var hideIcon by remember { mutableStateOf(SpUtils.getBoolean("hide_icon", false)) }
-    val languageTag = remember { mutableStateOf(SpUtils.getString("setting_language", "SYSTEM")) }
+    val languageTag = remember { mutableStateOf(SpUtils.getString("setting_language", "SYSTEM").ifEmpty { "SYSTEM" }) }
     val languageOptions = remember {
         LangList.LOCALES.map { tag ->
             if (tag == "SYSTEM") {
@@ -91,102 +93,114 @@ fun SettingsScreen(
         context.packageManager.setComponentEnabledSetting(component, status, PackageManager.DONT_KILL_APP)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        ThemeSmallTitle(stringResource(R.string.setting_webdav))
-        ThemeCard(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+    TabPageScaffold(title = stringResource(R.string.nav_settings)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ThemeSmallTitle(stringResource(R.string.setting_webdav))
+            ThemeCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    SwitchRow(
+                        title = stringResource(R.string.webdav_enable),
+                        checked = uiState.webdavMode != WebdavMode.None,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                val mode = when (uiState.webdavMode) {
+                                    WebdavMode.None -> WebdavMode.SyncFromWebdav
+                                    else -> uiState.webdavMode
+                                }
+                                viewModel.updateWebdavMode(mode)
+                            } else {
+                                viewModel.updateWebdavMode(WebdavMode.None)
+                            }
+                        },
+                    )
+                    ThemeTextField(
+                        value = uiState.webdavServer,
+                        onValueChange = viewModel::updateWebdavServer,
+                        label = stringResource(R.string.webdav_data),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ThemeTextField(
+                        value = uiState.webdavUsername,
+                        onValueChange = viewModel::updateWebdavUsername,
+                        label = stringResource(R.string.webdav_username),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ThemeTextField(
+                        value = uiState.webdavPassword,
+                        onValueChange = viewModel::updateWebdavPassword,
+                        label = stringResource(R.string.webdav_password),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            ThemeSmallTitle(stringResource(R.string.setting_general))
+            ThemeCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showLanguageDialog = true },
             ) {
-                SwitchRow(
-                    title = stringResource(R.string.webdav_enable),
-                    checked = uiState.prefEnableWebdav,
-                    onCheckedChange = viewModel::updatePrefEnableWebdav,
-                )
-                ThemeTextField(
-                    value = uiState.webdavServer,
-                    onValueChange = viewModel::updateWebdavServer,
-                    label = stringResource(R.string.webdav_data),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                ThemeTextField(
-                    value = uiState.webdavUsername,
-                    onValueChange = viewModel::updateWebdavUsername,
-                    label = stringResource(R.string.webdav_username),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                ThemeTextField(
-                    value = uiState.webdavPassword,
-                    onValueChange = viewModel::updateWebdavPassword,
-                    label = stringResource(R.string.webdav_password),
-                    modifier = Modifier.fillMaxWidth(),
+                SettingItemRow(
+                    icon = {
+                        ThemeIcon(Icons.Default.Language, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
+                    },
+                    title = stringResource(R.string.setting_lang),
+                    subtitle = languageLabels[languageTag.value] ?: languageTag.value,
                 )
             }
-        }
-
-        ThemeSmallTitle(stringResource(R.string.setting_general))
-        ThemeCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { showLanguageDialog = true },
-        ) {
-            SettingItemRow(
-                icon = {
-                    ThemeIcon(Icons.Default.Language, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
+            ThemeCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    CustomTabsHelper.launchUrlOrCopy(context, context.getString(R.string.translation_url))
                 },
-                title = stringResource(R.string.setting_lang),
-                subtitle = languageLabels[languageTag.value] ?: languageTag.value,
-            )
-        }
-        ThemeCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                CustomTabsHelper.launchUrlOrCopy(context, context.getString(R.string.translation_url))
-            },
-        ) {
-            SettingItemRow(
-                icon = {
-                    ThemeIcon(Icons.Default.Translate, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
-                },
-                title = stringResource(R.string.setting_translation),
-                subtitle = stringResource(R.string.setting_help_translation),
-            )
-        }
-        ThemeCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SettingSwitchRow(
+            ) {
+                SettingItemRow(
                     icon = {
-                        ThemeIcon(Icons.Default.VisibilityOff, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
+                        ThemeIcon(Icons.Default.Translate, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
                     },
-                    title = stringResource(R.string.hook_log_title),
-                    subtitle = stringResource(R.string.hook_log_desc),
-                    checked = hookLogEnabled,
-                    onCheckedChange = {
-                        hookLogEnabled = it
-                        SpUtils.putBoolean("pref_hook_log_enabled", it)
-                    },
-                )
-                SettingSwitchRow(
-                    icon = {
-                        ThemeIcon(Icons.Default.VisibilityOff, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
-                    },
-                    title = stringResource(R.string.hide_icon),
-                    checked = hideIcon,
-                    onCheckedChange = ::setHideIcon,
+                    title = stringResource(R.string.setting_translation),
+                    subtitle = stringResource(R.string.setting_help_translation),
                 )
             }
-        }
+            ThemeCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingSwitchRow(
+                        icon = {
+                            ThemeIcon(Icons.Default.VisibilityOff, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
+                        },
+                        title = stringResource(R.string.hook_log_title),
+                        subtitle = stringResource(R.string.hook_log_desc),
+                        checked = hookLogEnabled,
+                        onCheckedChange = {
+                            hookLogEnabled = it
+                            SpUtils.putBoolean("pref_hook_log_enabled", it)
+                        },
+                    )
+                    SettingSwitchRow(
+                        icon = {
+                            ThemeIcon(Icons.Default.VisibilityOff, contentDescription = null, tint = AnkioTheme.colorScheme.primary)
+                        },
+                        title = stringResource(R.string.hide_icon),
+                        checked = hideIcon,
+                        onCheckedChange = ::setHideIcon,
+                    )
+                }
+            }
 
-        ThemeSmallTitle(stringResource(R.string.setting_skin))
-        UiSettingsScreen(
-            modifier = Modifier.fillMaxWidth(),
-            onThemeChanged = onThemeChanged,
-        )
+            ThemeSmallTitle(stringResource(R.string.setting_skin))
+            UiSettingsScreen(
+                modifier = Modifier.fillMaxWidth(),
+                onThemeChanged = onThemeChanged,
+            )
+        }
     }
 
     if (showLanguageDialog) {
@@ -275,7 +289,7 @@ private fun SettingSwitchRow(
 fun SettingsScreenPreviewContent() {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -308,6 +322,8 @@ private fun SettingsScreenPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        SettingsScreenPreviewContent()
+        TabPageScaffold(title = stringResource(R.string.nav_settings)) {
+            SettingsScreenPreviewContent()
+        }
     }
 }

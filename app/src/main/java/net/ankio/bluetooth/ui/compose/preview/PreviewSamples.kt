@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.bluetooth.BleDevice
+import net.ankio.bluetooth.model.SimulateMode
+import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.viewmodel.MainUiState
 import net.ankio.bluetooth.viewmodel.ScanUiState
 import net.ankio.bluetooth.viewmodel.StatusBannerState
@@ -45,6 +47,8 @@ object PreviewSamples {
         prefCompany = "Apple",
         prefMac2 = "11:22:33:44:55:66",
         webdavLast = "2026-05-24 12:00",
+        webdavMode = WebdavMode.SyncFromWebdav,
+        simulateMode = SimulateMode.Self,
     )
 
     val scanUiState = ScanUiState(

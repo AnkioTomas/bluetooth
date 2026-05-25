@@ -3,19 +3,18 @@ package net.ankio.bluetooth.ui.compose
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -29,198 +28,183 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.bluetooth.BleDevice
+import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.ui.compose.preview.PreviewSamples
 import net.ankio.bluetooth.utils.BleConstant.BleConstant
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.viewmodel.ScanUiState
 import net.ankio.bluetooth.viewmodel.ScanViewModel
+import net.ankio.theme.AnkioTheme
 import net.ankio.theme.PreviewAll
 import net.ankio.theme.PreviewAllThemes
 import net.ankio.theme.ThemePreviewConfig
 import net.ankio.theme.ThemePreviewParameterProvider
-import net.ankio.theme.AnkioTheme
 import net.ankio.theme.compat.ThemeCard
+import net.ankio.theme.compat.ThemeFloatingActionButton
 import net.ankio.theme.compat.ThemeIcon
-import net.ankio.theme.compat.ThemeIconButton
 import net.ankio.theme.compat.ThemePrimaryButton
 import net.ankio.theme.compat.ThemeSlider
 import net.ankio.theme.compat.ThemeSwitch
 import net.ankio.theme.compat.ThemeText
 import net.ankio.theme.compat.ThemeTextField
-import net.ankio.theme.compat.ThemeTopAppBar
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScanScreen(
     viewModel: ScanViewModel,
-    onBack: () -> Unit,
     onDeviceSelected: () -> Unit,
-    showBackButton: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ScanScreenContent(
-        uiState = uiState,
-        onBack = onBack,
-        showBackButton = showBackButton,
-        onToggleScan = viewModel::toggleScan,
-        onOpenFilter = {
-            viewModel.stopScan()
-            viewModel.showFilterDialog(true)
-        },
-        onShowHistory = viewModel::showHistory,
-        onDeviceClick = { device ->
-            viewModel.selectDevice(device)
-            onDeviceSelected()
-        },
-        onDeviceLongClick = viewModel::removeDeviceAt,
-        onFilterDismiss = { wasScanning ->
-            viewModel.onFilterDismiss(wasScanning)
-        },
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ScanScreenContent(
-    uiState: ScanUiState,
-    onBack: () -> Unit,
-    showBackButton: Boolean,
-    onToggleScan: () -> Unit,
-    onOpenFilter: () -> Unit,
-    onShowHistory: () -> Unit,
-    onDeviceClick: (BleDevice) -> Unit,
-    onDeviceLongClick: (Int) -> Unit,
-    onFilterDismiss: (Boolean) -> Unit,
-) {
     var wasScanningBeforeFilter by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (showBackButton) {
-            ThemeTopAppBar(
-                title = stringResource(R.string.scan_blue),
-                modifier = Modifier.fillMaxWidth(),
-                navigationIcon = {
-                    ThemeIconButton(onClick = onBack) {
-                        ThemeIcon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            tint = AnkioTheme.colorScheme.onSurface,
-                        )
-                    }
+    TabPageScaffold(title = stringResource(R.string.nav_scan)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            ScanScreenContent(
+                uiState = uiState,
+                onToggleScan = viewModel::toggleScan,
+                onDeviceClick = { device ->
+                    viewModel.selectDevice(device)
+                    onDeviceSelected()
                 },
-                actions = {
-                    ScanTopBarActions(
-                        onOpenFilter = {
-                            wasScanningBeforeFilter = uiState.isScanning
-                            onOpenFilter()
-                        },
-                        onShowHistory = onShowHistory,
-                    )
+                onDeviceLongClick = viewModel::removeDeviceAt,
+            )
+
+            ScanFabActions(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 16.dp),
+                onSearch = viewModel::showHistory,
+                onFilter = {
+                    wasScanningBeforeFilter = uiState.isScanning
+                    viewModel.stopScan()
+                    viewModel.showFilterDialog(true)
                 },
             )
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                ScanTopBarActions(
-                    onOpenFilter = {
-                        wasScanningBeforeFilter = uiState.isScanning
-                        onOpenFilter()
-                    },
-                    onShowHistory = onShowHistory,
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            ThemePrimaryButton(
-                onClick = onToggleScan,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ThemeIcon(
-                    Icons.Default.Bluetooth,
-                    contentDescription = null,
-                    tint = AnkioTheme.colorScheme.onPrimary,
-                )
-                ThemeText(
-                    text = if (uiState.isScanning) {
-                        stringResource(R.string.stop_scan)
-                    } else {
-                        stringResource(R.string.start_scan)
-                    },
-                    style = AnkioTheme.textStyles.main,
-                    color = AnkioTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-
-            if (uiState.isScanning) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                    ThemeText(
-                        text = stringResource(R.string.start_scan),
-                        style = AnkioTheme.textStyles.main,
-                        color = AnkioTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            if (uiState.devices.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    ThemeText(
-                        text = stringResource(R.string.ic_empty),
-                        style = AnkioTheme.textStyles.main,
-                        color = AnkioTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    itemsIndexed(uiState.devices, key = { _, item -> item.address }) { index, device ->
-                        BleDeviceItem(
-                            device = device,
-                            onClick = { onDeviceClick(device) },
-                            onLongClick = { onDeviceLongClick(index) },
-                        )
-                    }
-                }
-            }
         }
     }
 
     if (uiState.showFilterDialog) {
         FilterDialog(
             onDismiss = {
-                onFilterDismiss(wasScanningBeforeFilter)
+                viewModel.onFilterDismiss(wasScanningBeforeFilter)
             },
         )
+    }
+}
+
+@Composable
+private fun ScanFabActions(
+    onSearch: () -> Unit,
+    onFilter: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.End,
+    ) {
+        ThemeFloatingActionButton(onClick = onSearch) {
+            ThemeIcon(
+                imageVector = Icons.Default.Search,
+                contentDescription = stringResource(R.string.scan_search),
+                tint = AnkioTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        ThemeFloatingActionButton(onClick = onFilter) {
+            ThemeIcon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = stringResource(R.string.scan_filter),
+                tint = AnkioTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ScanScreenContent(
+    uiState: ScanUiState,
+    onToggleScan: () -> Unit,
+    onDeviceClick: (BleDevice) -> Unit,
+    onDeviceLongClick: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        ThemePrimaryButton(
+            onClick = onToggleScan,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            ThemeIcon(
+                Icons.Default.Bluetooth,
+                contentDescription = null,
+                tint = AnkioTheme.colorScheme.onPrimary,
+            )
+            ThemeText(
+                text = if (uiState.isScanning) {
+                    stringResource(R.string.stop_scan)
+                } else {
+                    stringResource(R.string.start_scan)
+                },
+                style = AnkioTheme.textStyles.main,
+                color = AnkioTheme.colorScheme.onPrimary,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+
+        if (uiState.isScanning) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                ThemeText(
+                    text = stringResource(R.string.start_scan),
+                    style = AnkioTheme.textStyles.main,
+                    color = AnkioTheme.colorScheme.onSurface,
+                )
+            }
+        }
+
+        if (uiState.devices.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 32.dp, bottom = 88.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ThemeText(
+                    text = stringResource(R.string.ic_empty),
+                    style = AnkioTheme.textStyles.main,
+                    color = AnkioTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 12.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                itemsIndexed(uiState.devices, key = { _, item -> item.address }) { index, device ->
+                    BleDeviceItem(
+                        device = device,
+                        onClick = { onDeviceClick(device) },
+                        onLongClick = { onDeviceLongClick(index) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -230,17 +214,21 @@ private fun ScanScreenPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        ScanScreenContent(
-            uiState = PreviewSamples.scanUiState,
-            onBack = {},
-            showBackButton = true,
-            onToggleScan = {},
-            onOpenFilter = {},
-            onShowHistory = {},
-            onDeviceClick = {},
-            onDeviceLongClick = {},
-            onFilterDismiss = {},
-        )
+        TabPageScaffold(title = stringResource(R.string.nav_scan)) {
+            Box(Modifier.fillMaxSize()) {
+                ScanScreenContent(
+                    uiState = PreviewSamples.scanUiState,
+                    onToggleScan = {},
+                    onDeviceClick = {},
+                    onDeviceLongClick = {},
+                )
+                ScanFabActions(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    onSearch = {},
+                    onFilter = {},
+                )
+            }
+        }
     }
 }
 
@@ -250,17 +238,21 @@ private fun ScanScreenEmptyPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        ScanScreenContent(
-            uiState = PreviewSamples.scanUiStateEmpty,
-            onBack = {},
-            showBackButton = true,
-            onToggleScan = {},
-            onOpenFilter = {},
-            onShowHistory = {},
-            onDeviceClick = {},
-            onDeviceLongClick = {},
-            onFilterDismiss = {},
-        )
+        TabPageScaffold(title = stringResource(R.string.nav_scan)) {
+            Box(Modifier.fillMaxSize()) {
+                ScanScreenContent(
+                    uiState = PreviewSamples.scanUiStateEmpty,
+                    onToggleScan = {},
+                    onDeviceClick = {},
+                    onDeviceLongClick = {},
+                )
+                ScanFabActions(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    onSearch = {},
+                    onFilter = {},
+                )
+            }
+        }
     }
 }
 
@@ -271,19 +263,6 @@ private fun FilterDialogPreview(
 ) {
     PreviewAllThemes(config) {
         FilterDialog(onDismiss = {})
-    }
-}
-
-@Composable
-private fun RowScope.ScanTopBarActions(
-    onOpenFilter: () -> Unit,
-    onShowHistory: () -> Unit,
-) {
-    ThemeIconButton(onClick = onOpenFilter) {
-        ThemeIcon(Icons.Default.FilterList, contentDescription = null, tint = AnkioTheme.colorScheme.onSurface)
-    }
-    ThemeIconButton(onClick = onShowHistory) {
-        ThemeIcon(Icons.Default.History, contentDescription = null, tint = AnkioTheme.colorScheme.onSurface)
     }
 }
 

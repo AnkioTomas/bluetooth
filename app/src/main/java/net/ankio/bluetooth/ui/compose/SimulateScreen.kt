@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,6 +23,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.ankio.bluetooth.R
+import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.ui.compose.preview.PreviewSamples
 import net.ankio.bluetooth.viewmodel.MainUiState
 import net.ankio.bluetooth.viewmodel.MainViewModel
@@ -44,12 +44,14 @@ import net.ankio.theme.settings.toVerticalPadding
 @Composable
 fun SimulateScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SimulateScreenContent(
-        uiState = uiState,
-        onPrefMacChange = viewModel::updatePrefMac,
-        onPrefDataChange = viewModel::updatePrefData,
-        onPrefRssiChange = viewModel::updatePrefRssi,
-    )
+    TabPageScaffold(title = stringResource(R.string.nav_simulate)) {
+        SimulateScreenContent(
+            uiState = uiState,
+            onPrefMacChange = viewModel::updatePrefMac,
+            onPrefDataChange = viewModel::updatePrefData,
+            onPrefRssiChange = viewModel::updatePrefRssi,
+        )
+    }
 }
 
 @Composable
@@ -61,11 +63,12 @@ fun SimulateScreenContent(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        ThemeSectionHeader(stringResource(R.string.bluetooth_data))
 
         SimulateSettingBlock(
             title = stringResource(R.string.mac_data),
@@ -193,11 +196,13 @@ private fun SimulateScreenPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        SimulateScreenContent(
-            uiState = PreviewSamples.mainUiState,
-            onPrefMacChange = {},
-            onPrefDataChange = {},
-            onPrefRssiChange = {},
-        )
+        TabPageScaffold(title = stringResource(R.string.nav_simulate)) {
+            SimulateScreenContent(
+                uiState = PreviewSamples.mainUiState,
+                onPrefMacChange = {},
+                onPrefDataChange = {},
+                onPrefRssiChange = {},
+            )
+        }
     }
 }

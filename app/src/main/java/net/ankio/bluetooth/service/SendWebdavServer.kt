@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.data.BluetoothData
 import net.ankio.bluetooth.utils.ByteUtils
+import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
 import java.lang.Exception
@@ -39,8 +40,8 @@ class SendWebdavServer : Service() {
         private const val CHANNEL_ID = "ForegroundServiceChannel"
     }
     private val TAG = "BluetoothScanService"
-    private var deviceAddress = SpUtils.getString("pref_mac2", "") // 指定的蓝牙设备MAC地址
-    private var deviceCompany = SpUtils.getString("pref_company", "") // 指定的蓝牙设备公司
+    private var deviceAddress = SpUtils.getString(PrefKeys.PREF_MAC2, "")
+    private var deviceCompany = SpUtils.getString(PrefKeys.PREF_COMPANY, "")
     private val scanInterval: Long = 10 * 60 * 1000 // 10 minutes
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -78,8 +79,8 @@ class SendWebdavServer : Service() {
                     coroutineScope .launch(Dispatchers.IO) {
                         try {
                             WebdavUtils(
-                                SpUtils.getString("webdav_username", ""),
-                                SpUtils.getString("webdav_password", "")
+                                SpUtils.getString(PrefKeys.WEBDAV_USERNAME, ""),
+                                SpUtils.getString(PrefKeys.WEBDAV_PASSWORD, "")
                             ).sendToServer(
                                 net.ankio.bluetooth.bluetooth.BluetoothData(
                                     ByteUtils.bytesToHexString(scanRecord)?:"",

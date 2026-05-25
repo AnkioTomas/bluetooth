@@ -23,6 +23,7 @@ import net.ankio.bluetooth.bluetooth.BleDevice
 import net.ankio.bluetooth.data.BluetoothData
 import net.ankio.bluetooth.utils.BleConstant.BleConstant
 import net.ankio.bluetooth.utils.ByteUtils
+import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 
 data class ScanUiState(
@@ -70,7 +71,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     fun initialize(): Boolean {
         return try {
             defaultAdapter = (context.getSystemService(Application.BLUETOOTH_SERVICE) as BluetoothManager).adapter
-            val historyJson = SpUtils.getString("history", "")
+            val historyJson = SpUtils.getString(PrefKeys.HISTORY, "")
             historyList = Gson().fromJson<List<BleDevice>>(
                 historyJson,
                 object : TypeToken<List<BleDevice>>() {}.type,
@@ -104,12 +105,12 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectDevice(device: BleDevice) {
-        SpUtils.putString("pref_mac", device.address)
-        SpUtils.putString("pref_data", device.data)
-        SpUtils.putString("pref_rssi", device.rssi.toString())
+        SpUtils.putString(PrefKeys.PREF_MAC, device.address)
+        SpUtils.putString(PrefKeys.PREF_DATA, device.data)
+        SpUtils.putString(PrefKeys.PREF_RSSI, device.rssi.toString())
         if (!historyList.any { it.address == device.address }) {
             historyList.add(device)
-            SpUtils.putString("history", Gson().toJson(historyList))
+            SpUtils.putString(PrefKeys.HISTORY, Gson().toJson(historyList))
         }
         stopScan()
     }
@@ -119,7 +120,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
         if (index !in current.indices) return
         val removed = current.removeAt(index)
         historyList.removeAll { it.address == removed.address }
-        SpUtils.putString("history", Gson().toJson(historyList))
+        SpUtils.putString(PrefKeys.HISTORY, Gson().toJson(historyList))
         addressList.remove(removed.address)
         _uiState.update { it.copy(devices = current) }
     }

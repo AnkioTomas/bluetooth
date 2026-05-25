@@ -2,7 +2,7 @@ package net.ankio.bluetooth.ui.compose
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,17 +21,18 @@ import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.ui.compose.components.StatusBanner
+import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.ui.compose.preview.PreviewSamples
 import net.ankio.bluetooth.viewmodel.MainUiState
-import net.ankio.theme.settings.SettingCardPosition
-import net.ankio.theme.settings.ThemeSectionHeader
-import net.ankio.theme.settings.ThemeSettingDropdown
 import net.ankio.bluetooth.viewmodel.MainViewModel
 import net.ankio.theme.AnkioTheme
 import net.ankio.theme.PreviewAll
 import net.ankio.theme.PreviewAllThemes
 import net.ankio.theme.ThemePreviewConfig
 import net.ankio.theme.ThemePreviewParameterProvider
+import net.ankio.theme.settings.SettingCardPosition
+import net.ankio.theme.settings.ThemeSectionHeader
+import net.ankio.theme.settings.ThemeSettingDropdown
 
 @Composable
 fun HomeScreen(
@@ -39,11 +40,13 @@ fun HomeScreen(
     versionName: String,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreenContent(
-        uiState = uiState,
-        onWebdavModeChange = viewModel::updateWebdavMode,
-        onSimulateModeChange = viewModel::updateSimulateMode,
-    )
+    TabPageScaffold(title = stringResource(R.string.nav_home)) {
+        HomeScreenContent(
+            uiState = uiState,
+            onWebdavModeChange = viewModel::updateWebdavMode,
+            onSimulateModeChange = viewModel::updateSimulateMode,
+        )
+    }
 }
 
 @Composable
@@ -62,7 +65,7 @@ fun HomeScreenContent(
 
     Column(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -111,10 +114,12 @@ private fun HomeScreenPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        HomeScreenContent(
-            uiState = PreviewSamples.mainUiState,
-            onWebdavModeChange = {},
-            onSimulateModeChange = {},
-        )
+        TabPageScaffold(title = stringResource(R.string.nav_home)) {
+            HomeScreenContent(
+                uiState = PreviewSamples.mainUiState,
+                onWebdavModeChange = {},
+                onSimulateModeChange = {},
+            )
+        }
     }
 }
