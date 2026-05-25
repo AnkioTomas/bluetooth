@@ -27,6 +27,7 @@ import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.model.applyAppModes
 import net.ankio.bluetooth.service.SendWebdavServer
 import net.ankio.bluetooth.utils.HookUtils
+import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
 
@@ -73,6 +74,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _messages = MutableSharedFlow<Int>()
     val messages = _messages.asSharedFlow()
 
+    init {
+        load()
+    }
+
     fun load() {
         val webdavMode = WebdavMode.load()
         val simulateMode = SimulateMode.load()
@@ -80,18 +85,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 webdavMode = webdavMode,
                 simulateMode = simulateMode,
-                prefMac = SpUtils.getString("pref_mac", ""),
-                prefData = SpUtils.getString("pref_data", ""),
-                prefRssi = SpUtils.getString("pref_rssi", "-50").ifEmpty { "-50" },
+                prefMac = SpUtils.getString(PrefKeys.PREF_MAC, ""),
+                prefData = SpUtils.getString(PrefKeys.PREF_DATA, ""),
+                prefRssi = SpUtils.getString(PrefKeys.PREF_RSSI, "-50").ifEmpty { "-50" },
                 prefEnableWebdav = webdavMode != WebdavMode.None,
                 prefAsSender = webdavMode == WebdavMode.Sender2Webdav || simulateMode == SimulateMode.SenderNearBy,
                 prefEnable = simulateMode == SimulateMode.Self,
-                webdavServer = SpUtils.getString("webdav_server", "https://dav.jianguoyun.com/dav/"),
-                webdavUsername = SpUtils.getString("webdav_username", ""),
-                webdavPassword = SpUtils.getString("webdav_password", ""),
-                prefCompany = SpUtils.getString("pref_company", ""),
-                prefMac2 = SpUtils.getString("pref_mac2", ""),
-                webdavLast = SpUtils.getString("webdav_last", context.getString(R.string.webdav_no_sync)),
+                webdavServer = SpUtils.getString(PrefKeys.WEBDAV_SERVER, "https://dav.jianguoyun.com/dav/"),
+                webdavUsername = SpUtils.getString(PrefKeys.WEBDAV_USERNAME, ""),
+                webdavPassword = SpUtils.getString(PrefKeys.WEBDAV_PASSWORD, ""),
+                prefCompany = SpUtils.getString(PrefKeys.PREF_COMPANY, ""),
+                prefMac2 = SpUtils.getString(PrefKeys.PREF_MAC2, ""),
+                webdavLast = SpUtils.getString(PrefKeys.WEBDAV_LAST, context.getString(R.string.webdav_no_sync)),
             )
         }
         applyAppModes(webdavMode, simulateMode)
@@ -128,71 +133,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updatePrefMac(value: String) {
         _uiState.update { it.copy(prefMac = value) }
-        SpUtils.putString("pref_mac", value)
+        SpUtils.putString(PrefKeys.PREF_MAC, value)
         saveToLocal()
     }
 
     fun updatePrefData(value: String) {
         _uiState.update { it.copy(prefData = value) }
-        SpUtils.putString("pref_data", value)
+        SpUtils.putString(PrefKeys.PREF_DATA, value)
         saveToLocal()
     }
 
     fun updatePrefRssi(value: String) {
         _uiState.update { it.copy(prefRssi = value) }
-        SpUtils.putString("pref_rssi", value)
+        SpUtils.putString(PrefKeys.PREF_RSSI, value)
         saveToLocal()
-    }
-
-    fun updatePrefEnable(value: Boolean) {
-        updateSimulateMode(if (value) SimulateMode.Self else SimulateMode.None)
-    }
-
-    fun updatePrefEnableWebdav(value: Boolean) {
-        val mode = if (!value) {
-            WebdavMode.None
-        } else if (_uiState.value.webdavMode == WebdavMode.Sender2Webdav) {
-            WebdavMode.Sender2Webdav
-        } else {
-            WebdavMode.SyncFromWebdav
-        }
-        updateWebdavMode(mode)
-    }
-
-    fun updatePrefAsSender(value: Boolean) {
-        if (value) {
-            updateSimulateMode(SimulateMode.SenderNearBy)
-        } else {
-            val current = _uiState.value.simulateMode
-            if (current == SimulateMode.SenderNearBy) {
-                updateSimulateMode(SimulateMode.None)
-            }
-        }
     }
 
     fun updateWebdavServer(value: String) {
         _uiState.update { it.copy(webdavServer = value) }
-        SpUtils.putString("webdav_server", value)
+        SpUtils.putString(PrefKeys.WEBDAV_SERVER, value)
     }
 
     fun updateWebdavUsername(value: String) {
         _uiState.update { it.copy(webdavUsername = value) }
-        SpUtils.putString("webdav_username", value)
+        SpUtils.putString(PrefKeys.WEBDAV_USERNAME, value)
     }
 
     fun updateWebdavPassword(value: String) {
         _uiState.update { it.copy(webdavPassword = value) }
-        SpUtils.putString("webdav_password", value)
-    }
-
-    fun updatePrefCompany(value: String) {
-        _uiState.update { it.copy(prefCompany = value) }
-        SpUtils.putString("pref_company", value)
-    }
-
-    fun updatePrefMac2(value: String) {
-        _uiState.update { it.copy(prefMac2 = value) }
-        SpUtils.putString("pref_mac2", value)
+        SpUtils.putString(PrefKeys.WEBDAV_PASSWORD, value)
     }
 
     private fun isSender(): Boolean {
@@ -247,7 +216,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     Icons.Default.Error,
                 )
             } else {
-                SpUtils.putInt("app_version", BuildConfig.VERSION_CODE)
+                SpUtils.putInt(PrefKeys.APP_VERSION, BuildConfig.VERSION_CODE)
                 StatusBannerState(
                     R.string.active_success,
                     StatusKind.Success,
@@ -289,15 +258,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val state = _uiState.value
                 val bluetoothData = WebdavUtils(state.webdavUsername, state.webdavPassword).getFromServer()
                 if (bluetoothData != null) {
-                    SpUtils.putString("pref_data", bluetoothData.data)
-                    SpUtils.putString("pref_mac", bluetoothData.mac)
+                    SpUtils.putString(PrefKeys.PREF_DATA, bluetoothData.data)
+                    SpUtils.putString(PrefKeys.PREF_MAC, bluetoothData.mac)
                     _uiState.update {
                         it.copy(
                             prefData = bluetoothData.data,
                             prefMac = bluetoothData.mac,
-                            webdavLast = SpUtils.getString("webdav_last", context.getString(R.string.webdav_no_sync)),
+                            webdavLast = SpUtils.getString(PrefKeys.WEBDAV_LAST, context.getString(R.string.webdav_no_sync)),
                         )
                     }
+                    saveToLocal()
                     _messages.emit(R.string.sync_pull_success)
                 }
             } catch (e: SardineException) {
@@ -311,7 +281,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun saveToLocal() {
         val state = _uiState.value
-        val historyJson = SpUtils.getString("history", "")
+        val historyJson = SpUtils.getString(PrefKeys.HISTORY, "")
         var localHistoryList = Gson().fromJson<List<BleDevice>>(
             historyJson,
             object : TypeToken<List<BleDevice>>() {}.type,
@@ -344,6 +314,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ),
             )
         }
-        SpUtils.putString("history", Gson().toJson(saveHistory))
+        SpUtils.putString(PrefKeys.HISTORY, Gson().toJson(saveHistory))
     }
 }

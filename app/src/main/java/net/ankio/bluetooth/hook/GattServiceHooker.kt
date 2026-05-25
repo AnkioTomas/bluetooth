@@ -6,6 +6,7 @@ import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import net.ankio.bluetooth.utils.ByteUtils
+import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.HookLogManager
 import net.ankio.xposed.lib.hook.api.PartHooker
 import net.ankio.xposed.lib.hook.hook.Hooker
@@ -18,7 +19,7 @@ class GattServiceHooker : PartHooker() {
 
     override fun hook() {
         HookConfig.reload()
-        if (!HookConfig.getBoolean("pref_enable", false)) {
+        if (!HookConfig.getBoolean(PrefKeys.PREF_ENABLE, false)) {
             HookLogManager.d(tag, "关闭蓝牙模拟功能")
             return
         }
@@ -71,7 +72,7 @@ class GattServiceHooker : PartHooker() {
 
         @SuppressLint("SuspiciousIndentation")
         override fun run() {
-            val mac = HookConfig.getString("pref_mac", "76:A7:8A:67:66:C9")
+            val mac = HookConfig.getString(PrefKeys.PREF_MAC, "76:A7:8A:67:66:C9")
             val params = arrayOf<Serializable>(
                 0x1b,
                 0x00,
@@ -80,11 +81,11 @@ class GattServiceHooker : PartHooker() {
                 0x00,
                 0xff,
                 0x7f,
-                HookConfig.getString("pref_rssi", "-50").toInt(),
+                HookConfig.getString(PrefKeys.PREF_RSSI, "-50").toInt(),
                 0x00,
                 ByteUtils.hexStringToBytes(
                     HookConfig.getString(
-                        "pref_data",
+                        PrefKeys.PREF_DATA,
                         "02010403033CFE17FF0001B500024271A7B6000000C983926CB1011000000000000000000000000000000000000000000000000000000000000000000000",
                     ),
                 ),
