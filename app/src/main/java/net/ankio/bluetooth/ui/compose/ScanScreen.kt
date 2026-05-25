@@ -47,6 +47,7 @@ import net.ankio.theme.ThemePreviewParameterProvider
 import net.ankio.theme.compat.ThemeCard
 import net.ankio.theme.compat.ThemeFloatingActionButton
 import net.ankio.theme.compat.ThemeIcon
+import net.ankio.theme.compat.ThemeLinearProgressIndicator
 import net.ankio.theme.compat.ThemePrimaryButton
 import net.ankio.theme.compat.ThemeSlider
 import net.ankio.theme.compat.ThemeSwitch
@@ -75,15 +76,17 @@ fun ScanScreen(
             )
 
             ScanFabActions(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
+                isScanning = uiState.isScanning,
+                onToggleScan = viewModel::toggleScan,
                 onSearch = viewModel::showHistory,
                 onFilter = {
                     wasScanningBeforeFilter = uiState.isScanning
                     viewModel.stopScan()
                     viewModel.showFilterDialog(true)
                 },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 16.dp),
             )
         }
     }
@@ -99,6 +102,8 @@ fun ScanScreen(
 
 @Composable
 private fun ScanFabActions(
+    isScanning: Boolean,
+    onToggleScan: () -> Unit,
     onSearch: () -> Unit,
     onFilter: () -> Unit,
     modifier: Modifier = Modifier,
@@ -108,6 +113,25 @@ private fun ScanFabActions(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.End,
     ) {
+        // 扫描按钮 FAB
+        ThemeFloatingActionButton(
+            onClick = onToggleScan
+        ) {
+            if (isScanning) {
+                ThemeText(
+                    text = "STOP",
+                    style = AnkioTheme.textStyles.main,
+                    color = AnkioTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            } else {
+                ThemeIcon(
+                    imageVector = Icons.Default.Bluetooth,
+                    contentDescription = stringResource(R.string.toggle_scan),
+                    tint = AnkioTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
         ThemeFloatingActionButton(onClick = onSearch) {
             ThemeIcon(
                 imageVector = Icons.Default.Search,
@@ -138,44 +162,6 @@ fun ScanScreenContent(
             .fillMaxSize()
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        ThemePrimaryButton(
-            onClick = onToggleScan,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            ThemeIcon(
-                Icons.Default.Bluetooth,
-                contentDescription = null,
-                tint = AnkioTheme.colorScheme.onPrimary,
-            )
-            ThemeText(
-                text = if (uiState.isScanning) {
-                    stringResource(R.string.stop_scan)
-                } else {
-                    stringResource(R.string.start_scan)
-                },
-                style = AnkioTheme.textStyles.main,
-                color = AnkioTheme.colorScheme.onPrimary,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-
-        if (uiState.isScanning) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                ThemeText(
-                    text = stringResource(R.string.start_scan),
-                    style = AnkioTheme.textStyles.main,
-                    color = AnkioTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
         if (uiState.devices.isEmpty()) {
             Column(
                 modifier = Modifier
@@ -223,9 +209,11 @@ private fun ScanScreenPreview(
                     onDeviceLongClick = {},
                 )
                 ScanFabActions(
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    isScanning = false,
+                    onToggleScan = {},
                     onSearch = {},
                     onFilter = {},
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
             }
         }
@@ -247,9 +235,11 @@ private fun ScanScreenEmptyPreview(
                     onDeviceLongClick = {},
                 )
                 ScanFabActions(
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    isScanning = false,
+                    onToggleScan = {},
                     onSearch = {},
                     onFilter = {},
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
             }
         }
