@@ -29,6 +29,14 @@
     <string name="status_sender_on">发送端服务运行中</string>
     <string name="status_sender_off">发送端未启用</string>
     <string name="home_mode_hint">在「模拟」配置信号，在「蓝牙」扫描设备。</string>
+    <string name="home_section_modes">工作模式</string>
+    <string name="home_webdav_mode">WebDAV</string>
+    <string name="home_simulate_mode">模拟模式</string>
+    <string name="webdav_mode_sender2webdav">发送到 WebDAV</string>
+    <string name="webdav_mode_sync">从 WebDAV 同步</string>
+    <string name="simulate_mode_nearby">附近发送端</string>
+    <string name="simulate_mode_self">本机模拟</string>
+    <string name="mode_none">关闭</string>
     <string name="setting_webdav">WebDAV</string>
     <string name="setting_general">通用</string>
     <string name="choose_theme">选择一个主题</string>

@@ -29,6 +29,14 @@
     <string name="status_sender_on">Sender service running</string>
     <string name="status_sender_off">Sender mode off</string>
     <string name="home_mode_hint">Configure signals on Simulate, scan devices on Bluetooth.</string>
+    <string name="home_section_modes">Modes</string>
+    <string name="home_webdav_mode">WebDAV</string>
+    <string name="home_simulate_mode">Simulation</string>
+    <string name="webdav_mode_sender2webdav">Send to WebDAV</string>
+    <string name="webdav_mode_sync">Sync from WebDAV</string>
+    <string name="simulate_mode_nearby">Nearby sender</string>
+    <string name="simulate_mode_self">Local device</string>
+    <string name="mode_none">Off</string>
     <string name="setting_webdav">WebDAV</string>
     <string name="setting_general">General</string>
     <string name="choose_theme">Choose A Theme</string>

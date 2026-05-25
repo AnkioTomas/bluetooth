@@ -22,6 +22,9 @@ import kotlinx.coroutines.launch
 import net.ankio.bluetooth.BuildConfig
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.bluetooth.BleDevice
+import net.ankio.bluetooth.model.SimulateMode
+import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.model.applyAppModes
 import net.ankio.bluetooth.service.SendWebdavServer
 import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.SpUtils
@@ -55,6 +58,8 @@ data class MainUiState(
     val prefCompany: String = "",
     val prefMac2: String = "",
     val webdavLast: String = "",
+    val webdavMode: WebdavMode = WebdavMode.None,
+    val simulateMode: SimulateMode = SimulateMode.None,
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -69,20 +74,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val messages = _messages.asSharedFlow()
 
     fun load() {
+        val webdavMode = WebdavMode.load()
+        val simulateMode = SimulateMode.load()
         _uiState.update {
             it.copy(
+                webdavMode = webdavMode,
+                simulateMode = simulateMode,
                 prefMac = SpUtils.getString("pref_mac", ""),
                 prefData = SpUtils.getString("pref_data", ""),
                 prefRssi = SpUtils.getString("pref_rssi", "-50").ifEmpty { "-50" },
-                prefEnable = SpUtils.getBoolean("pref_enable", false),
-                prefEnableWebdav = SpUtils.getBoolean("pref_enable_webdav", false),
-                prefAsSender = SpUtils.getBoolean("pref_as_sender", false),
+                prefEnableWebdav = webdavMode != WebdavMode.None,
+                prefAsSender = webdavMode == WebdavMode.Sender2Webdav || simulateMode == SimulateMode.SenderNearBy,
+                prefEnable = simulateMode == SimulateMode.Self,
                 webdavServer = SpUtils.getString("webdav_server", "https://dav.jianguoyun.com/dav/"),
                 webdavUsername = SpUtils.getString("webdav_username", ""),
                 webdavPassword = SpUtils.getString("webdav_password", ""),
                 prefCompany = SpUtils.getString("pref_company", ""),
                 prefMac2 = SpUtils.getString("pref_mac2", ""),
                 webdavLast = SpUtils.getString("webdav_last", context.getString(R.string.webdav_no_sync)),
+            )
+        }
+        applyAppModes(webdavMode, simulateMode)
+        serverConnect()
+    }
+
+    fun updateWebdavMode(mode: WebdavMode) {
+        val simulateMode = _uiState.value.simulateMode
+        commitModes(mode, simulateMode)
+    }
+
+    fun updateSimulateMode(mode: SimulateMode) {
+        val webdavMode = _uiState.value.webdavMode
+        commitModes(webdavMode, mode)
+    }
+
+    private fun commitModes(webdavMode: WebdavMode, simulateMode: SimulateMode) {
+        val webdavEnabled = webdavMode != WebdavMode.None
+        val asSender = webdavMode == WebdavMode.Sender2Webdav || simulateMode == SimulateMode.SenderNearBy
+        val mockEnable = simulateMode == SimulateMode.Self
+
+        applyAppModes(webdavMode, simulateMode)
+        _uiState.update {
+            it.copy(
+                webdavMode = webdavMode,
+                simulateMode = simulateMode,
+                prefEnableWebdav = webdavEnabled,
+                prefAsSender = asSender,
+                prefEnable = mockEnable,
             )
         }
         serverConnect()
@@ -107,28 +145,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updatePrefEnable(value: Boolean) {
-        _uiState.update { it.copy(prefEnable = value) }
-        SpUtils.putBoolean("pref_enable", value)
+        updateSimulateMode(if (value) SimulateMode.Self else SimulateMode.None)
     }
 
     fun updatePrefEnableWebdav(value: Boolean) {
-        _uiState.update { it.copy(prefEnableWebdav = value) }
-        SpUtils.putBoolean("pref_enable_webdav", value)
-        serverConnect()
+        val mode = if (!value) {
+            WebdavMode.None
+        } else if (_uiState.value.webdavMode == WebdavMode.Sender2Webdav) {
+            WebdavMode.Sender2Webdav
+        } else {
+            WebdavMode.SyncFromWebdav
+        }
+        updateWebdavMode(mode)
     }
 
     fun updatePrefAsSender(value: Boolean) {
-        _uiState.update {
-            it.copy(
-                prefAsSender = value,
-                prefEnable = if (value) false else it.prefEnable,
-            )
-        }
-        SpUtils.putBoolean("pref_as_sender", value)
         if (value) {
-            SpUtils.putBoolean("pref_enable", false)
+            updateSimulateMode(SimulateMode.SenderNearBy)
+        } else {
+            val current = _uiState.value.simulateMode
+            if (current == SimulateMode.SenderNearBy) {
+                updateSimulateMode(SimulateMode.None)
+            }
         }
-        serverConnect()
     }
 
     fun updateWebdavServer(value: String) {

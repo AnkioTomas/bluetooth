@@ -21,7 +21,7 @@ open class App : Application() {
         }
 
         fun getLocale(): Locale? {
-            val tag: String = SpUtils.getString("setting_language", "SYSTEM")
+            val tag: String = SpUtils.getString("setting_language", "SYSTEM").ifEmpty { "SYSTEM" }
             return getLocale(tag)
         }
 
