@@ -1,28 +1,79 @@
 package net.ankio.bluetooth.utils
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
-import net.ankio.bluetooth.App
+import androidx.core.content.edit
 
+class SpUtils private constructor(
+    context: Context,
+) {
 
-const val NAME = "config"
+    private val sp: SharedPreferences by lazy {
+        context.getSharedPreferences(
+            PREF_NAME,
+            if (HookUtils.getActiveAndSupportFramework()) {
+                Context.MODE_WORLD_READABLE
+            } else {
+                Context.MODE_PRIVATE
+            },
+        )
+    }
 
-@SuppressLint("StaticFieldLeak")
-val context = App.context
+    fun putBoolean(key: String, value: Boolean) {
+        sp.edit { putBoolean(key, value) }
+    }
 
-val sp: SharedPreferences = context.getSharedPreferences(NAME, if(HookUtils.getActiveAndSupportFramework())Context.MODE_WORLD_READABLE else Context.MODE_PRIVATE)
+    fun getBoolean(key: String, default: Boolean = false): Boolean =
+        sp.getBoolean(key, default)
 
-object SpUtils {
-    fun putBoolean(key: String,value:Boolean) = sp.edit().putBoolean(key, value).apply()
-    fun getBoolean(key: String,result: Boolean = false) = sp.getBoolean(key, result)
-    fun putString(key: String,value: String) = sp.edit().putString(key, value).apply()
-    fun getString(key: String, result: String? = ""): String = sp.getString(key, result)?:""
-    fun putInt(key: String,value:Int) = sp.edit().putInt(key, value).apply()
+    fun putString(key: String, value: String) {
+        sp.edit { putString(key, value) }
+    }
 
-    fun getInt(key: String, result: Int = 0): Int = sp.getInt(key, result)
+    fun getString(key: String, default: String = ""): String =
+        sp.getString(key, default).orEmpty()
 
-    fun putLong(key: String,value:Long) = sp.edit().putLong(key, value).apply()
+    fun putInt(key: String, value: Int) {
+        sp.edit { putInt(key, value) }
+    }
 
-    fun getLong(key: String, result: Long = 0): Long = sp.getLong(key, result)
+    fun getInt(key: String, default: Int = 0): Int =
+        sp.getInt(key, default)
+
+    fun putLong(key: String, value: Long) {
+        sp.edit { putLong(key, value) }
+    }
+
+    fun getLong(key: String, default: Long = 0): Long =
+        sp.getLong(key, default)
+
+    companion object {
+        private const val PREF_NAME = "config"
+
+        private lateinit var instance: SpUtils
+
+        fun init(context: Context) {
+            instance = SpUtils(context.applicationContext)
+        }
+
+        fun putBoolean(key: String, value: Boolean) = instance.putBoolean(key, value)
+
+        fun getBoolean(key: String, default: Boolean = false): Boolean =
+            instance.getBoolean(key, default)
+
+        fun putString(key: String, value: String) = instance.putString(key, value)
+
+        fun getString(key: String, default: String = ""): String =
+            instance.getString(key, default)
+
+        fun putInt(key: String, value: Int) = instance.putInt(key, value)
+
+        fun getInt(key: String, default: Int = 0): Int =
+            instance.getInt(key, default)
+
+        fun putLong(key: String, value: Long) = instance.putLong(key, value)
+
+        fun getLong(key: String, default: Long = 0): Long =
+            instance.getLong(key, default)
+    }
 }

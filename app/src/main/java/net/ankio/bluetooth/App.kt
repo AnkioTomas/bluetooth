@@ -35,6 +35,7 @@ open class App : Application() {
     override fun onCreate() {
         super.onCreate()
         context = applicationContext
+        SpUtils.init(this)
         ThemeSettings.init(this)
         ThemeToast.init(this)
         LocaleDelegate.defaultLocale = getLocale()
