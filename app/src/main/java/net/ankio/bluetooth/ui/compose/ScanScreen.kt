@@ -255,7 +255,7 @@ private fun FilterDialogPreview(
 ) {
     PreviewAllThemes(config) {
         val context = LocalContext.current
-        remember { SpUtils.init(context) }
+        SpUtils.init(context)
         FilterDialog(onDismiss = {})
     }
 }
