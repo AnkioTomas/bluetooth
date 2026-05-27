@@ -30,13 +30,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
@@ -47,18 +42,28 @@ android {
         generatedClassFullName.set("net.ankio.utils.LangList")
         generatedArrayFirstItem.set("SYSTEM")
     }
-    packagingOptions {
-        exclude("META-INF/DEPENDENCIES")
-        exclude("META-INF/LICENSE")
-        exclude("META-INF/LICENSE.md")
-        exclude("META-INF/LICENSE.txt")
-        exclude("META-INF/NOTICE")
-        exclude("META-INF/NOTICE.txt")
-        exclude("META-INF/NOTICE.md")
-        exclude("META-INF/ASL2.0")
-        exclude("META-INF/gson/FieldAttributes.txt")
-        exclude("META-INF/gson/LongSerializationPolicy.txt")
-        exclude("META-INF/gson/annotations.txt")
+    packaging {
+        resources {
+            excludes += listOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/NOTICE.md",
+                "META-INF/ASL2.0",
+                "META-INF/gson/FieldAttributes.txt",
+                "META-INF/gson/LongSerializationPolicy.txt",
+                "META-INF/gson/annotations.txt"
+            )
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
 
@@ -80,13 +85,13 @@ dependencies {
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.14.0")
-    implementation("com.github.AnkioTomas:theme:1.0.5")
+    implementation("com.github.AnkioTomas:theme:1.1.0")
+    implementation("com.github.AnkioTomas:webdav:1.0.3")
     implementation("androidx.browser:browser:1.10.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 
-    implementation("com.github.thegrizzlylabs:sardine-android:0.8")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("com.guolindev.permissionx:permissionx:1.8.1")
