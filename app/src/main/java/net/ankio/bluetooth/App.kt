@@ -5,10 +5,10 @@ import android.app.Application
 import android.content.Context
 import android.text.TextUtils
 import net.ankio.bluetooth.utils.LocaleDelegate
+import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.theme.ThemeSettings
 import net.ankio.theme.toast.ThemeToast
-import net.ankio.bluetooth.utils.SpUtils
-import java.util.*
+import java.util.Locale
 
 
 open class App : Application() {
@@ -39,10 +39,6 @@ open class App : Application() {
         ThemeSettings.init(this)
         ThemeToast.init(this)
         LocaleDelegate.defaultLocale = getLocale()
-    }
-
-    override fun attachBaseContext(base: Context?) {
-        super.attachBaseContext(base)
     }
 
 
