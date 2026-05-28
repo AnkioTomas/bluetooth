@@ -4,25 +4,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import net.ankio.bluetooth.viewmodel.StatusKind
 import net.ankio.theme.AnkioTheme
 import net.ankio.theme.LocalColorMode
 import net.ankio.theme.LocalUiMode
-import net.ankio.theme.PreviewAll
-import net.ankio.theme.PreviewAllThemes
-import net.ankio.theme.ThemePreviewConfig
-import net.ankio.theme.ThemePreviewParameterProvider
 import net.ankio.theme.UiMode
 import net.ankio.theme.compat.ThemeCard
 import net.ankio.theme.compat.ThemeIcon
 import net.ankio.theme.compat.ThemeText
+
+enum class StatusKind {
+    Error,
+    Success,
+    Warning,
+}
 
 @Composable
 fun StatusBanner(
@@ -50,7 +49,7 @@ fun StatusBanner(
         contentColor = contentColor,
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(32.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -58,19 +57,4 @@ fun StatusBanner(
             ThemeText(text = message, style = AnkioTheme.textStyles.main, color = contentColor)
         }
     }
-}
-@PreviewAll
-@Composable
-fun StatusBarPreview(
-    @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig
-) {
-    // Preview different status types
-    PreviewAllThemes(config) {
-        StatusBanner(
-            message = "激活",
-            kind = StatusKind.Error,
-            icon = androidx.compose.material.icons.Icons.Default.Error
-        )
-    }
-
 }
