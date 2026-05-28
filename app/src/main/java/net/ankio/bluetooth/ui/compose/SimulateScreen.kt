@@ -3,6 +3,7 @@ package net.ankio.bluetooth.ui.compose
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Router
@@ -12,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -23,8 +23,7 @@ import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.viewmodel.SimulateViewModel
 import net.ankio.theme.AnkioTheme
-import net.ankio.theme.compat.ThemeSlider
-import net.ankio.theme.compat.ThemeText
+import net.ankio.theme.compat.ThemeIcon
 import net.ankio.theme.settings.SettingCardPosition
 import net.ankio.theme.settings.ThemeSettingSlider
 import net.ankio.theme.settings.ThemeSettingTextField
@@ -53,15 +52,16 @@ fun SimulateScreenContent(
     onPrefRssiChange: (String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
+        modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ThemeSettingTextField(
             value = prefMac,
             onValueChange = onPrefMacChange,
             title = stringResource(R.string.mac_data),
             startAction = {
-                Icon(
+                ThemeIcon(
                     imageVector = Icons.Filled.Router,
                     contentDescription = null,
                     tint = AnkioTheme.colorScheme.primary,
@@ -75,7 +75,7 @@ fun SimulateScreenContent(
             onValueChange = onPrefDataChange,
             title = stringResource(R.string.broadcast_data),
             startAction = {
-                Icon(
+                ThemeIcon(
                     imageVector = Icons.Filled.Campaign,
                     contentDescription = null,
                     tint = AnkioTheme.colorScheme.primary,
@@ -85,25 +85,18 @@ fun SimulateScreenContent(
         )
 
         var rssiValue by remember(prefRssi) { mutableIntStateOf(prefRssi.toIntOrNull() ?: -50) }
-        var slider by remember(prefRssi) { mutableFloatStateOf(
-            when {
-                rssiValue >= 0 -> 100f
-                rssiValue <= -100 -> 0f
-                else -> (100 + rssiValue).toFloat()
-            }
-        ) }
+        var slider  = rssiValue.toFloat()
 
         ThemeSettingSlider(
             title = stringResource(R.string.signal),
             value = slider,
             onValueChange = {
-                slider = it
                 rssiValue = it.toInt()
                 onPrefRssiChange(rssiValue.toString())
             },
             valueRange = 0f..100f,
             startAction = {
-                Icon(
+                ThemeIcon(
                     imageVector = Icons.Filled.SignalCellularAlt,
                     contentDescription = null,
                     tint = AnkioTheme.colorScheme.primary,
