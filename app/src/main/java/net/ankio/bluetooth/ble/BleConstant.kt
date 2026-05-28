@@ -1,4 +1,4 @@
-package net.ankio.bluetooth.utils
+package net.ankio.bluetooth.ble
 
 /**
  *
