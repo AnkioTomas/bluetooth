@@ -28,7 +28,7 @@ import net.ankio.theme.settings.SettingCardPosition
 import net.ankio.theme.settings.ThemeSectionHeader
 import net.ankio.theme.settings.ThemeSettingDropdown
 
-// 👑 老大：负责和外部世界（ViewModel、Navigation）打交道，收集状态
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
@@ -44,7 +44,6 @@ fun HomeScreen(
     }
 }
 
-// 👷 小弟：纯粹的 UI，只认数据，不认识 ViewModel。这就是“无状态 (Stateless)”
 @Composable
 fun HomeScreenContent(
     webdavMode: WebdavMode,
