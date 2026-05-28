@@ -91,6 +91,22 @@ class BleScanner(context: Context) {
     fun isRunning(): Boolean = running
 
     /**
+     * 停止扫描并关闭系统蓝牙。
+     *
+     * @return true 表示已发起关闭；false 表示权限不足或适配器不可用
+     */
+    fun disableBluetooth(): Boolean {
+        stop()
+        if (!hasConnectPermission()) return false
+        val adapter = bluetoothAdapter ?: return false
+        return try {
+            adapter.disable()
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
+    /**
      * 解析单条扫描结果并回调。须在已通过 [hasConnectPermission] 的路径内调用。
      */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

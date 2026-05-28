@@ -24,7 +24,7 @@ private fun ScanScreenPreview(
             ScanScreenContent(
                 devices = PreviewSamples.scanDevices,
                 isScanning = true,
-                onToggleScan = {},
+                onScanFabClick = {},
                 onFilter = {},
                 onDeviceClick = {},
                 onDeviceRemoveAt = {},

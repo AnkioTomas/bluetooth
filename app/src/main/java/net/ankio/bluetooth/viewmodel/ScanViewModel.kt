@@ -37,14 +37,20 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     var openSimulate by mutableStateOf(false)
 
     /**
-     * 切换扫描状态。开启时会清空当前列表重新收集结果。
+     * 扫描页主按钮：未扫描时开始扫描，扫描中关闭蓝牙。
      */
-    fun toggleScanning() {
+    fun onScanFabClick() {
         if (isScanning) {
-            stopScanning()
-            return
+            closeBluetooth()
+        } else {
+            startScanning()
         }
+    }
 
+    /**
+     * 开始扫描，并清空当前列表重新收集结果。
+     */
+    fun startScanning() {
         devices = emptyList()
         val started = scanner.start { device ->
             if (devices.any { it.address == device.address }) return@start
@@ -54,6 +60,14 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
             isScanning = true
             scheduleScanTimeout()
         }
+    }
+
+    /**
+     * 停止扫描并关闭系统蓝牙。
+     */
+    fun closeBluetooth() {
+        stopScanning()
+        scanner.disableBluetooth()
     }
 
     /**

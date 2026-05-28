@@ -85,6 +85,7 @@
     <string name="filter">Filter</string>
     <string name="scan_filter">Filter</string>
     <string name="toggle_scan">Scan</string>
+    <string name="close_bluetooth">Turn off Bluetooth</string>
     <string name="server_name">Bluetooth Webdav Service is working</string>
     <string name="server_error">Server not work</string>
     <string name="server_working">Server is working</string>

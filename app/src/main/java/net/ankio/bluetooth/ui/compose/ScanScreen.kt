@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -80,7 +81,7 @@ fun ScanScreen(
         ScanScreenContent(
             devices = viewModel.devices,
             isScanning = viewModel.isScanning,
-            onToggleScan = viewModel::toggleScanning,
+            onScanFabClick = viewModel::onScanFabClick,
             onFilter = viewModel::openFilterDialog,
             onDeviceClick = viewModel::selectDevice,
             onDeviceRemoveAt = viewModel::removeDeviceAt,
@@ -97,7 +98,7 @@ fun ScanScreen(
  *
  * @param devices 当前扫描结果列表
  * @param isScanning 是否处于扫描中
- * @param onToggleScan 切换扫描状态
+ * @param onScanFabClick 主按钮：未扫描时开始扫描，扫描中关闭蓝牙
  * @param onFilter 打开筛选面板
  * @param onDeviceClick 点击设备
  * @param onDeviceRemoveAt 长按删除设备
@@ -106,7 +107,7 @@ fun ScanScreen(
 fun ScanScreenContent(
     devices: List<BleDevice>,
     isScanning: Boolean,
-    onToggleScan: () -> Unit,
+    onScanFabClick: () -> Unit,
     onFilter: () -> Unit,
     onDeviceClick: (BleDevice) -> Unit,
     onDeviceRemoveAt: (Int) -> Unit,
@@ -164,13 +165,12 @@ fun ScanScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            ThemeFloatingActionButton(onClick = onToggleScan) {
+            ThemeFloatingActionButton(onClick = onScanFabClick) {
                 if (isScanning) {
-                    ThemeText(
-                        text = "STOP",
-                        style = AnkioTheme.textStyles.main,
-                        color = AnkioTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                    ThemeIcon(
+                        imageVector = Icons.Default.BluetoothDisabled,
+                        contentDescription = stringResource(R.string.close_bluetooth),
+                        tint = AnkioTheme.colorScheme.onPrimaryContainer,
                     )
                 } else {
                     ThemeIcon(
