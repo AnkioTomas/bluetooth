@@ -1,42 +1,27 @@
 package net.ankio.bluetooth.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.utils.PrefKeys
+import net.ankio.bluetooth.utils.SpUtils
+import net.ankio.bluetooth.utils.persistedState
 
-class HomeViewModel(
-    initialWebdavMode: WebdavMode = WebdavMode.current(),
-    initialSimulateMode: SimulateMode = SimulateMode.current(),
-) : ViewModel() {
+class HomeViewModel : ViewModel() {
 
-    var webdavMode by mutableStateOf(initialWebdavMode)
-        private set
-
-    var simulateMode by mutableStateOf(initialSimulateMode)
-        private set
-
-    fun selectWebdavMode(index: Int) {
-        val mode = WebdavMode.entries.getOrElse(index.coerceIn(WebdavMode.entries.indices)) {
-            WebdavMode.None
-        }
-        // 内部可以直接赋值修改
-        webdavMode = mode
-        mode.save()
-
-        // Todo 启动周期性任务
-
+    var webdavMode: WebdavMode by persistedState(
+        initialValue = WebdavMode.current(),
+        debounceMs = 0L,
+    ) { value ->
+        SpUtils.putString(PrefKeys.WEBDAV_MODE, value.name)
+        // TODO 这里需要额外的操作（启动webdav服务）
     }
 
-    fun selectSimulateMode(index: Int) {
-        val mode = SimulateMode.entries.getOrElse(index.coerceIn(SimulateMode.entries.indices)) {
-            SimulateMode.None
-        }
-        simulateMode = mode
-        mode.save()
-
-        // TODO 启动对外发送任务
+    var simulateMode: SimulateMode by persistedState(
+        initialValue = SimulateMode.current(),
+    ) { value ->
+        SpUtils.putString(PrefKeys.SIMULATE_MODE, value.name)
+        // TODO 这里需要额外的操作（启动外围模拟）
     }
+
 }

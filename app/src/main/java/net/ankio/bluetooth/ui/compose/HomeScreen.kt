@@ -30,16 +30,13 @@ import net.ankio.theme.settings.ThemeSettingDropdown
 
 
 @Composable
-fun HomeScreen(
-    viewModel: HomeViewModel = viewModel(),
-) {
+fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     TabPageScaffold(title = stringResource(R.string.nav_home)) {
-        // 2. 把纯数据和方法传给小弟
         HomeScreenContent(
             webdavMode = viewModel.webdavMode,
             simulateMode = viewModel.simulateMode,
-            onWebdavModeChange = viewModel::selectWebdavMode,
-            onSimulateModeChange = viewModel::selectSimulateMode
+            onWebdavModeChange = {viewModel.webdavMode = it},
+            onSimulateModeChange = {viewModel.simulateMode = it}
         )
     }
 }
@@ -48,9 +45,9 @@ fun HomeScreen(
 fun HomeScreenContent(
     webdavMode: WebdavMode,
     simulateMode: SimulateMode,
-    onWebdavModeChange: (Int) -> Unit,
-    onSimulateModeChange: (Int) -> Unit,
-    modifier: Modifier = Modifier // 提供 modifier 默认参数是 Compose 的好习惯
+    onWebdavModeChange: (WebdavMode) -> Unit,
+    onSimulateModeChange: (SimulateMode) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val webdavOptions = WebdavMode.entries
     val simulateOptions = SimulateMode.entries
@@ -76,7 +73,9 @@ fun HomeScreenContent(
         ThemeSettingDropdown(
             items = webdavLabels,
             selectedIndex = webdavIndex,
-            onSelectedIndexChange = onWebdavModeChange, // 直接调用传进来的 Lambda
+            onSelectedIndexChange = {
+                onWebdavModeChange(webdavOptions[it])
+            }, // 直接调用传进来的 Lambda
             title = stringResource(R.string.home_webdav_mode),
             startAction = {
                 Icon(
@@ -91,7 +90,9 @@ fun HomeScreenContent(
         ThemeSettingDropdown(
             items = simulateLabels,
             selectedIndex = simulateIndex,
-            onSelectedIndexChange = onSimulateModeChange, // 直接调用传进来的 Lambda
+            onSelectedIndexChange = {
+                onSimulateModeChange(simulateOptions[it])
+            }, // 直接调用传进来的 Lambda
             title = stringResource(R.string.home_simulate_mode),
             startAction = {
                 Icon(
