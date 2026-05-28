@@ -99,7 +99,7 @@ class BleScanner(context: Context) {
 
         val scanRecord = result.scanRecord?.bytes ?: return
         val companyName = bluetoothData.parseManufacturerData(scanRecord) ?: "None"
-        val name = result.device.name
+        val name = bluetoothData.parseLocalName(scanRecord) ?: result.device.name
         if (!matchesFilter(companyName, name, result.rssi)) return
 
         onDeviceFound(

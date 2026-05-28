@@ -1,9 +1,11 @@
 package net.ankio.bluetooth.data
 
 import android.content.Context
+import java.nio.charset.StandardCharsets
 
 class BluetoothData(context: Context) {
     private val bluetoothCompanyParser = BluetoothCompanyParser(context)
+
     fun parseManufacturerData(advertisingData: ByteArray): String? {
         var index = 0
         while (index < advertisingData.size - 2) {
@@ -25,6 +27,33 @@ class BluetoothData(context: Context) {
             index += length
         }
         return "None"
+    }
+
+    /**
+     * 解析广播本地名称：
+     * - 0x09 Complete Local Name
+     * - 0x08 Shortened Local Name
+     */
+    fun parseLocalName(advertisingData: ByteArray): String? {
+        var index = 0
+        while (index < advertisingData.size - 1) {
+            val length = advertisingData[index++].toInt() and 0xFF
+            if (length == 0 || index + length > advertisingData.size) break
+
+            val type = advertisingData[index].toInt() and 0xFF
+            if (type == 0x09 || type == 0x08) {
+                val nameLength = length - 1
+                if (nameLength <= 0) return null
+                val start = index + 1
+                val end = start + nameLength
+                return advertisingData.copyOfRange(start, end)
+                    .toString(StandardCharsets.UTF_8)
+                    .trim()
+                    .ifBlank { null }
+            }
+            index += length
+        }
+        return null
     }
 
 }
