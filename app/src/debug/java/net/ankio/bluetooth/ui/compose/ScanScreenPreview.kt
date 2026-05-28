@@ -27,7 +27,6 @@ private fun ScanScreenPreview(
                 onScanFabClick = {},
                 onFilter = {},
                 onDeviceClick = {},
-                onDeviceRemoveAt = {},
             )
         }
     }
