@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.text.TextUtils
 import net.ankio.bluetooth.utils.LocaleDelegate
+import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.theme.ThemeSettings
 import net.ankio.theme.toast.ThemeToast
@@ -21,7 +22,7 @@ open class App : Application() {
         }
 
         fun getLocale(): Locale? {
-            val tag: String = SpUtils.getString("setting_language", "SYSTEM").ifEmpty { "SYSTEM" }
+            val tag: String = SpUtils.getString(PrefKeys.SETTING_LANGUAGE, "SYSTEM").ifEmpty { "SYSTEM" }
             return getLocale(tag)
         }
 
@@ -38,7 +39,7 @@ open class App : Application() {
         SpUtils.init(this)
         ThemeSettings.init(this)
         ThemeToast.init(this)
-        LocaleDelegate.defaultLocale = getLocale()
+        LocaleDelegate.updateDefaultLocale(getLocale(), increaseVersion = false)
     }
 
 
