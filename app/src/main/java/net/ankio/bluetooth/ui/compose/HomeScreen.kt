@@ -60,7 +60,6 @@ fun HomeScreenContent(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         StatusBanner(
             message = stringResource(R.string.active_success),
