@@ -5,10 +5,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -24,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -70,6 +75,7 @@ fun ScanScreen(
     TabPageScaffold(
         title = stringResource(R.string.nav_scan),
         scrollContent = false,
+
     ) {
         ScanScreenContent(
             devices = viewModel.devices,
@@ -136,8 +142,8 @@ fun ScanScreenContent(
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                        .padding(bottom = 88.dp),
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     itemsIndexed(devices, key = { _, item -> item.address }) { index, device ->
@@ -199,20 +205,25 @@ private fun ScanDeviceCard(
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
             ThemeIcon(
                 Icons.Default.Bluetooth,
                 contentDescription = null,
                 tint = AnkioTheme.colorScheme.primary,
             )
-            Column(Modifier.weight(1f)) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ThemeText(
-                        text = device.company ?: "None",
+                        text = device.name ?: "None",
                         style = AnkioTheme.textStyles.title4,
                         color = AnkioTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
@@ -220,14 +231,27 @@ private fun ScanDeviceCard(
                     ThemeText(
                         text = "${device.rssi} dBm",
                         style = AnkioTheme.textStyles.footnote1,
-                        color = AnkioTheme.colorScheme.onSurfaceVariant,
+                        color = AnkioTheme.colorScheme.primary,
                     )
                 }
-                ThemeText(
-                    text = device.address,
-                    style = AnkioTheme.textStyles.footnote1,
-                    color = AnkioTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ThemeText(
+                        text = device.company ?: "None",
+                        style = AnkioTheme.textStyles.footnote1,
+                        color = AnkioTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ThemeText(
+                        text = device.address,
+                        style = AnkioTheme.textStyles.footnote1,
+                        color = AnkioTheme.colorScheme.onSurfaceVariant,
+
+                    )
+                }
                 ThemeText(
                     text = device.data,
                     style = AnkioTheme.textStyles.footnote2,
