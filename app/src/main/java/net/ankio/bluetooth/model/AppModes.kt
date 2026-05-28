@@ -18,11 +18,12 @@ enum class WebdavMode {
         None -> R.string.mode_none
     }
 
+    fun save() {
+        SpUtils.putString(PrefKeys.WEBDAV_MODE, name)
+    }
+
     companion object {
-        fun load(): WebdavMode {
-            val stored = SpUtils.getString(PrefKeys.WEBDAV_MODE, "")
-            return entries.firstOrNull { it.name == stored } ?: None
-        }
+        fun current(): WebdavMode = readPref(PrefKeys.WEBDAV_MODE, None)
     }
 }
 
@@ -39,23 +40,14 @@ enum class SimulateMode {
         None -> R.string.mode_none
     }
 
+    fun save() {
+        SpUtils.putString(PrefKeys.SIMULATE_MODE, name)
+    }
+
     companion object {
-        fun load(): SimulateMode {
-            val stored = SpUtils.getString(PrefKeys.SIMULATE_MODE, "")
-            return entries.firstOrNull { it.name == stored } ?: None
-        }
+        fun current(): SimulateMode = readPref(PrefKeys.SIMULATE_MODE, None)
     }
 }
 
-/** 将模式写入 SpUtils，并同步 Hook 仍读取的 legacy 布尔项 */
-fun applyAppModes(webdavMode: WebdavMode, simulateMode: SimulateMode) {
-    val webdavEnabled = webdavMode != WebdavMode.None
-    val asSender = webdavMode == WebdavMode.Sender2Webdav || simulateMode == SimulateMode.SenderNearBy
-    val mockEnable = simulateMode == SimulateMode.Self
-
-    SpUtils.putString(PrefKeys.WEBDAV_MODE, webdavMode.name)
-    SpUtils.putString(PrefKeys.SIMULATE_MODE, simulateMode.name)
-    SpUtils.putBoolean(PrefKeys.PREF_ENABLE_WEBDAV, webdavEnabled)
-    SpUtils.putBoolean(PrefKeys.PREF_AS_SENDER, asSender)
-    SpUtils.putBoolean(PrefKeys.PREF_ENABLE, mockEnable)
-}
+private inline fun <reified T : Enum<T>> readPref(key: String, default: T): T =
+    enumValues<T>().firstOrNull { it.name == SpUtils.getString(key, "") } ?: default
