@@ -25,6 +25,9 @@ class HomeViewModel(
         // 内部可以直接赋值修改
         webdavMode = mode
         mode.save()
+
+        // Todo 启动周期性任务
+
     }
 
     fun selectSimulateMode(index: Int) {
@@ -33,5 +36,7 @@ class HomeViewModel(
         }
         simulateMode = mode
         mode.save()
+
+        // TODO 启动对外发送任务
     }
 }
