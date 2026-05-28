@@ -122,7 +122,7 @@ class BleScanner(context: Context) {
             BleDevice(
                 data = ByteUtils.bytesToHexString(scanRecord) ?: "",
                 company = companyName.ifBlank { "None" },
-                rssi = result.rssi,
+                rssi = Rssi.normalizeDbm(result.rssi, result.rssi),
                 address = result.device.address,
                 name = if (name.isNullOrBlank()) "None" else name,
             ),
@@ -142,7 +142,7 @@ class BleScanner(context: Context) {
         val company = SpUtils.getString(BleConstant.COMPANY, "")
         if (company.isNotEmpty() && !companyName.contains(company, ignoreCase = true)) return false
 
-        val minRssi = -SpUtils.getInt(BleConstant.RSSI, 100)
+        val minRssi = Rssi.normalizeDbm(SpUtils.getInt(BleConstant.RSSI, Rssi.DEFAULT_FILTER_DBM))
         return rssi >= minRssi
     }
 

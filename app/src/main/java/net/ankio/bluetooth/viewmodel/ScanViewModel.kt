@@ -6,8 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import net.ankio.bluetooth.ble.BleScanner
 import net.ankio.bluetooth.ble.BleDevice
+import net.ankio.bluetooth.ble.BleScanner
+import net.ankio.bluetooth.ble.Rssi
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import kotlinx.coroutines.Job
@@ -88,7 +89,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     fun selectDevice(device: BleDevice) {
         SpUtils.putString(PrefKeys.PREF_MAC, device.address)
         SpUtils.putString(PrefKeys.PREF_DATA, device.data)
-        SpUtils.putString(PrefKeys.PREF_RSSI, device.rssi.toString())
+        SpUtils.putString(PrefKeys.PREF_RSSI, Rssi.normalizeDbm(device.rssi).toString())
         stopScanning()
         openSimulate = true
     }

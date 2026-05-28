@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
+import net.ankio.bluetooth.ble.Rssi
 import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.viewmodel.SimulateViewModel
 import net.ankio.theme.AnkioTheme
@@ -83,14 +84,17 @@ fun SimulateScreenContent(
             position = SettingCardPosition.Middle,
         )
 
-        var rssiValue by remember(prefRssi) { mutableIntStateOf(prefRssi.toIntOrNull() ?: -50) }
-        var slider  = rssiValue.toFloat()
+        var rssiValue by remember(prefRssi) {
+            mutableIntStateOf(Rssi.normalizeDbmString(prefRssi))
+        }
+        var slider by remember(prefRssi) { mutableFloatStateOf(Rssi.dbmToSlider(rssiValue)) }
 
         ThemeSettingSlider(
             title = stringResource(R.string.signal),
             value = slider,
             onValueChange = {
-                rssiValue = it.toInt()
+                slider = it
+                rssiValue = Rssi.sliderToDbm(it)
                 onPrefRssiChange(rssiValue.toString())
             },
             valueRange = 0f..100f,

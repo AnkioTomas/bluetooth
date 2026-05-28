@@ -9,6 +9,7 @@ package net.ankio.bluetooth.ble
 data class BleDevice(
     var data: String,
     var company: String?,
+    /** 信号强度（dBm），通常为 [-100, 0] 的负数 */
     var rssi: Int,
     var address: String,
     var name: String?

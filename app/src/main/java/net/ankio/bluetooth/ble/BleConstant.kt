@@ -20,7 +20,7 @@ class BleConstant {
         const val NULL_NAME = "nullName"
 
         /**
-         * 过滤信号强度值
+         * 扫描过滤最低 RSSI（dBm，负数，如 -70）
          */
         const val RSSI = "rssi"
     }

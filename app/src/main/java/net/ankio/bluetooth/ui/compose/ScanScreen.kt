@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ble.BleDevice
+import net.ankio.bluetooth.ble.Rssi
 import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.ui.navigation.AppTab
 import net.ankio.bluetooth.ui.navigation.navigateToTab
@@ -225,7 +227,7 @@ private fun ScanDeviceCard(
                         modifier = Modifier.weight(1f),
                     )
                     ThemeText(
-                        text = "${device.rssi} dBm",
+                        text = "${Rssi.normalizeDbm(device.rssi)} dBm",
                         style = AnkioTheme.textStyles.footnote1,
                         color = AnkioTheme.colorScheme.primary,
                     )
@@ -268,7 +270,12 @@ private fun ScanDeviceCard(
 private fun ScanFilterSheet(onDismiss: () -> Unit) {
     var filterEmptyName by remember { mutableStateOf(SpUtils.getBoolean(BleConstant.NULL_NAME)) }
     var company by remember { mutableStateOf(SpUtils.getString(BleConstant.COMPANY, "")) }
-    var rssi by remember { mutableFloatStateOf(SpUtils.getInt(BleConstant.RSSI, 100).toFloat()) }
+    var minRssi by remember {
+        mutableIntStateOf(
+            Rssi.normalizeDbm(SpUtils.getInt(BleConstant.RSSI, Rssi.DEFAULT_FILTER_DBM)),
+        )
+    }
+    var slider by remember(minRssi) { mutableFloatStateOf(Rssi.dbmToSlider(minRssi)) }
 
     ThemeBottomSheet(onDismissRequest = onDismiss){
         Column(
@@ -300,15 +307,16 @@ private fun ScanFilterSheet(onDismiss: () -> Unit) {
                 color = AnkioTheme.colorScheme.onSurface,
             )
             ThemeText(
-                text = "-${rssi.toInt()} dBm",
+                text = "$minRssi dBm",
                 style = AnkioTheme.textStyles.footnote1,
                 color = AnkioTheme.colorScheme.onSurfaceVariant,
             )
             ThemeSlider(
-                value = rssi,
+                value = slider,
                 onValueChange = {
-                    rssi = it
-                    SpUtils.putInt(BleConstant.RSSI, it.toInt())
+                    slider = it
+                    minRssi = Rssi.sliderToDbm(it)
+                    SpUtils.putInt(BleConstant.RSSI, minRssi)
                 },
                 valueRange = 0f..100f,
                 modifier = Modifier.fillMaxWidth(),
