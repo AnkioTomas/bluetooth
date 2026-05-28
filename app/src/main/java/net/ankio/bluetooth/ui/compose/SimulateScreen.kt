@@ -83,20 +83,22 @@ fun SimulateScreenContent(
             position = SettingCardPosition.Middle,
         )
 
-        val rssiValue = prefRssi.toIntOrNull() ?: -50
-        val initialSlider = when {
-            rssiValue >= 0 -> 100f
-            rssiValue <= -100 -> 0f
-            else -> (100 + rssiValue).toFloat()
-        }
-        var slider by remember(prefRssi) { mutableFloatStateOf(initialSlider) }
+        var rssiValue by remember(prefRssi) { mutableStateOf(prefRssi.toIntOrNull() ?: -50) }
+        var slider by remember(prefRssi) { mutableFloatStateOf(
+            when {
+                rssiValue >= 0 -> 100f
+                rssiValue <= -100 -> 0f
+                else -> (100 + rssiValue).toFloat()
+            }
+        ) }
 
         ThemeSettingSlider(
             title = stringResource(R.string.signal),
             value = slider,
             onValueChange = {
                 slider = it
-                onPrefRssiChange(it.toString())
+                rssiValue = it.toInt()
+                onPrefRssiChange(rssiValue.toString())
             },
             valueRange = 0f..100f,
             startAction = {
