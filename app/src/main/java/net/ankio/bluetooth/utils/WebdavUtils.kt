@@ -1,76 +1,49 @@
 package net.ankio.bluetooth.utils
 
-
+import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import com.google.gson.Gson
-import com.thegrizzlylabs.sardineandroid.Sardine
-import com.thegrizzlylabs.sardineandroid.impl.OkHttpSardine
-import net.ankio.bluetooth.bluetooth.BluetoothData
-import java.io.BufferedReader
-import java.io.InputStream
-import java.io.InputStreamReader
+import net.ankio.bluetooth.ble.BluetoothData
+import net.ankio.webdav.lib.WebDav
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+class WebdavUtils(private val context: Context) {
 
-class WebdavUtils(username:String,password:String) {
+    private val client = WebDav.client(context)
 
-
-    private val sardine: Sardine = OkHttpSardine()
-
-    private val server = SpUtils.getString(PrefKeys.WEBDAV_SERVER, "https://dav.jianguoyun.com/dav/").trimEnd('/')
-    private var dir = server +   "/bluetooth".trimEnd('/')
-    private var file = "$dir/bluetooth.json"
-    init {
-          sardine.setCredentials(username,password)
-          if (!sardine.exists(dir)) {
-              sardine.createDirectory(dir)
-          }
+    suspend fun sendToServer(bluetoothData: BluetoothData) {
+        Log.i(TAG, "Send Bluetooth to Webdav")
+        ensureBluetoothDir()
+        SpUtils.putString(PrefKeys.WEBDAV_LAST, now())
+        val json = Gson().toJson(bluetoothData)
+        if (client.exists(BLUETOOTH_FILE)) {
+            client.delete(BLUETOOTH_FILE)
+        }
+        client.writeBytes(BLUETOOTH_FILE, json.toByteArray(), "application/json")
     }
 
-    fun sendToServer(bluetoothData: BluetoothData) {
-        Log.i("Webdav","Send Bluetooth to Webdav")
-        SpUtils.putString(PrefKeys.WEBDAV_LAST, getTime())
-        val gson = Gson()
-        // 将 User 对象转换为 JSON 数据
-        val json = gson.toJson(bluetoothData)
-        if (sardine.exists(file))
-            sardine.delete(file)
-        // 输出 JSON 数据
-        sardine.put("$dir/bluetooth.json", json.toByteArray())
-
+    suspend fun getFromServer(): BluetoothData? {
+        if (!client.exists(BLUETOOTH_FILE)) return null
+        SpUtils.putString(PrefKeys.WEBDAV_LAST, now())
+        return Gson().fromJson(client.readText(BLUETOOTH_FILE), BluetoothData::class.java)
     }
 
-    private fun getTime(): String {
-        val currentTime = Date()
+    private suspend fun ensureBluetoothDir() {
+        if (!client.exists(BLUETOOTH_DIR)) {
+            client.mkdirs(BLUETOOTH_DIR)
+        }
+    }
+
+    private fun now(): String {
         val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        return formatter.format(currentTime)
+        return formatter.format(Date())
     }
 
-
-    fun getFromServer(): BluetoothData? {
-        if (sardine.exists(file)) {
-            SpUtils.putString(PrefKeys.WEBDAV_LAST, getTime())
-            return Gson().fromJson(
-                convertInputStreamToString(sardine.get(file)),
-                BluetoothData::class.java
-            )
-        }
-        return null
+    companion object {
+        private const val TAG = "WebdavUtils"
+        private const val BLUETOOTH_DIR = "/bluetooth"
+        private const val BLUETOOTH_FILE = "/bluetooth/bluetooth.json"
     }
-
-    private fun convertInputStreamToString(inputStream: InputStream): String {
-        val bufferedReader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
-        val stringBuilder = StringBuilder()
-        var line: String?
-        while (bufferedReader.readLine().also { line = it } != null) {
-            stringBuilder.append(line)
-        }
-        bufferedReader.close()
-        return stringBuilder.toString()
-    }
-
-
 }

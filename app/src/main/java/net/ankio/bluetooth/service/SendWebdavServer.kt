@@ -1,17 +1,13 @@
 package net.ankio.bluetooth.service
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -40,7 +36,7 @@ class SendWebdavServer : Service() {
         private const val CHANNEL_ID = "ForegroundServiceChannel"
     }
     private val TAG = "BluetoothScanService"
-    private var deviceAddress = SpUtils.getString(PrefKeys.PREF_MAC2, "")
+    private var deviceAddress = SpUtils.getString(PrefKeys.PREF_MAC, "")
     private var deviceCompany = SpUtils.getString(PrefKeys.PREF_COMPANY, "")
     private val scanInterval: Long = 10 * 60 * 1000 // 10 minutes
 
@@ -78,12 +74,9 @@ class SendWebdavServer : Service() {
                     val coroutineScope = CoroutineScope(Dispatchers.Main)
                     coroutineScope .launch(Dispatchers.IO) {
                         try {
-                            WebdavUtils(
-                                SpUtils.getString(PrefKeys.WEBDAV_USERNAME, ""),
-                                SpUtils.getString(PrefKeys.WEBDAV_PASSWORD, "")
-                            ).sendToServer(
-                                net.ankio.bluetooth.bluetooth.BluetoothData(
-                                    ByteUtils.bytesToHexString(scanRecord)?:"",
+                            WebdavUtils(this@SendWebdavServer).sendToServer(
+                                net.ankio.bluetooth.ble.BluetoothData(
+                                    ByteUtils.bytesToHexString(scanRecord) ?: "",
                                     result.device.address,
                                     result.rssi.toString()
                                 )

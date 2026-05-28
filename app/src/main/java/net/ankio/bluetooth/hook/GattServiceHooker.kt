@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
+import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.utils.ByteUtils
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.HookLogManager
@@ -19,7 +20,7 @@ class GattServiceHooker : PartHooker() {
 
     override fun hook() {
         HookConfig.reload()
-        if (!HookConfig.getBoolean(PrefKeys.PREF_ENABLE, false)) {
+        if (HookConfig.getString(PrefKeys.SIMULATE_MODE, "") !== SimulateMode.Self.toString()) {
             HookLogManager.d(tag, "关闭蓝牙模拟功能")
             return
         }
