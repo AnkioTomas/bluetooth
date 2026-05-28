@@ -1,183 +1,118 @@
 package net.ankio.bluetooth.viewmodel
 
 import android.app.Application
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.os.Handler
-import android.os.Looper
-import android.text.TextUtils
-import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import net.ankio.bluetooth.bluetooth.BleDevice
-import net.ankio.bluetooth.data.BluetoothData
-import net.ankio.bluetooth.utils.BleConstant.BleConstant
-import net.ankio.bluetooth.utils.ByteUtils
+import net.ankio.bluetooth.ble.BleScanner
+import net.ankio.bluetooth.ble.BleDevice
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-data class ScanUiState(
-    val devices: List<BleDevice> = emptyList(),
-    val isScanning: Boolean = false,
-    val showFilterDialog: Boolean = false,
-)
-
+/**
+ * 扫描页状态与交互编排：
+ * - 管理扫描开关和设备列表
+ * - 管理筛选面板显示
+ * - 处理选中设备后的配置落盘与页面跳转信号
+ */
 class ScanViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        private const val SCAN_TIMEOUT_MS = 60_000L
+    }
 
-    private val tag = "ScanViewModel"
-    private val context get() = getApplication<Application>()
+    private val scanner = BleScanner(application)
+    private var scanTimeoutJob: Job? = null
 
-    private val _uiState = MutableStateFlow(ScanUiState())
-    val uiState = _uiState.asStateFlow()
+    var devices by mutableStateOf(emptyList<BleDevice>())
 
-    private val _messages = MutableSharedFlow<String>()
-    val messages = _messages.asSharedFlow()
+    var isScanning by mutableStateOf(false)
 
-    private var defaultAdapter: BluetoothAdapter? = null
-    private val addressList = mutableSetOf<String>()
-    private var historyList = mutableListOf<BleDevice>()
-    private val handler = Handler(Looper.getMainLooper())
-    private var stopScanRunnable: Runnable? = null
+    var showFilterDialog by mutableStateOf(false)
 
-    private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val scanRecord = result.scanRecord?.bytes ?: return
-            viewModelScope.launch {
-                val companyName = BluetoothData(context).parseManufacturerData(scanRecord)
-                val name = result.device.name
-                addDevice(
-                    BleDevice(
-                        ByteUtils.bytesToHexString(scanRecord) ?: "",
-                        if (TextUtils.isEmpty(companyName)) "None" else companyName,
-                        result.rssi,
-                        result.device.address,
-                        if (TextUtils.isEmpty(name)) "None" else name,
-                    ),
-                )
-            }
+    var openSimulate by mutableStateOf(false)
+
+    /**
+     * 切换扫描状态。开启时会清空当前列表重新收集结果。
+     */
+    fun toggleScanning() {
+        if (isScanning) {
+            stopScanning()
+            return
+        }
+
+        devices = emptyList()
+        val started = scanner.start { device ->
+            if (devices.any { it.address == device.address }) return@start
+            devices = devices + device
+        }
+        if (started) {
+            isScanning = true
+            scheduleScanTimeout()
         }
     }
 
-    fun initialize(): Boolean {
-        return try {
-            defaultAdapter = (context.getSystemService(Application.BLUETOOTH_SERVICE) as BluetoothManager).adapter
-            val historyJson = SpUtils.getString(PrefKeys.HISTORY, "")
-            historyList = Gson().fromJson<List<BleDevice>>(
-                historyJson,
-                object : TypeToken<List<BleDevice>>() {}.type,
-            )?.toMutableList() ?: mutableListOf()
-            true
-        } catch (e: NullPointerException) {
-            e.message?.let { Log.e(tag, it) }
-            false
-        }
+    /**
+     * 打开筛选面板前先停止扫描，避免边扫边改过滤条件造成状态抖动。
+     */
+    fun openFilterDialog() {
+        stopScanning()
+        showFilterDialog = true
     }
 
-    fun toggleScan() {
-        if (_uiState.value.isScanning) stopScan() else startScan()
+    fun dismissFilterDialog() {
+        showFilterDialog = false
     }
 
-    fun showHistory() {
-        stopScan()
-        addressList.clear()
-        val devices = historyList.toList()
-        _uiState.update { it.copy(devices = devices, isScanning = false) }
-        addressList.addAll(devices.map { it.address })
-    }
-
-    fun showFilterDialog(show: Boolean) {
-        _uiState.update { it.copy(showFilterDialog = show) }
-    }
-
-    fun onFilterDismiss(wasScanning: Boolean) {
-        _uiState.update { it.copy(showFilterDialog = false) }
-        if (wasScanning) startScan()
-    }
-
+    /**
+     * 选中设备后保存模拟参数，并发送跳转到模拟页的信号。
+     */
     fun selectDevice(device: BleDevice) {
         SpUtils.putString(PrefKeys.PREF_MAC, device.address)
         SpUtils.putString(PrefKeys.PREF_DATA, device.data)
         SpUtils.putString(PrefKeys.PREF_RSSI, device.rssi.toString())
-        if (!historyList.any { it.address == device.address }) {
-            historyList.add(device)
-            SpUtils.putString(PrefKeys.HISTORY, Gson().toJson(historyList))
-        }
-        stopScan()
+        stopScanning()
+        openSimulate = true
     }
 
+    /**
+     * 删除单条扫描结果，仅影响当前展示列表。
+     */
     fun removeDeviceAt(index: Int) {
-        val current = _uiState.value.devices.toMutableList()
-        if (index !in current.indices) return
-        val removed = current.removeAt(index)
-        historyList.removeAll { it.address == removed.address }
-        SpUtils.putString(PrefKeys.HISTORY, Gson().toJson(historyList))
-        addressList.remove(removed.address)
-        _uiState.update { it.copy(devices = current) }
+        if (index !in devices.indices) return
+        devices = devices.toMutableList().also { it.removeAt(index) }
     }
 
-    fun stopScan() {
-        stopScanRunnable?.let { handler.removeCallbacks(it) }
-        val adapter = defaultAdapter ?: return
-        if (!adapter.isEnabled) return
-        if (!_uiState.value.isScanning) return
-        try {
-            adapter.bluetoothLeScanner.stopScan(scanCallback)
-        } catch (_: SecurityException) {
-            viewModelScope.launch { _messages.emit(context.getString(net.ankio.bluetooth.R.string.no_permission)) }
-            return
-        }
-        addressList.clear()
-        _uiState.update { it.copy(isScanning = false, devices = emptyList()) }
+    /**
+     * 清理一次性导航信号，防止重复触发。
+     */
+    fun clearOpenSimulate() {
+        openSimulate = false
     }
 
-    private fun startScan() {
-        val adapter = defaultAdapter ?: return
-        if (!adapter.isEnabled) {
-            viewModelScope.launch { _messages.emit(context.getString(net.ankio.bluetooth.R.string.not_open_bluetooth)) }
-            return
-        }
-        if (_uiState.value.isScanning) return
-
-        addressList.clear()
-        _uiState.update { it.copy(isScanning = true, devices = emptyList()) }
-
-        try {
-            adapter.bluetoothLeScanner.startScan(scanCallback)
-        } catch (_: SecurityException) {
-            viewModelScope.launch { _messages.emit(context.getString(net.ankio.bluetooth.R.string.no_permission)) }
-            _uiState.update { it.copy(isScanning = false) }
-            return
-        }
-
-        stopScanRunnable = Runnable { stopScan() }
-        handler.postDelayed(stopScanRunnable!!, 5 * 60 * 1000L)
+    private fun stopScanning() {
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = null
+        scanner.stop()
+        isScanning = false
     }
 
-    private fun addDevice(bleDevice: BleDevice) {
-        val company = SpUtils.getString(BleConstant.COMPANY, "")
-        if (!TextUtils.isEmpty(company) && bleDevice.company?.contains(company) == false) {
-            return
-        }
-        val rssiFilter = -SpUtils.getInt(BleConstant.RSSI, 100)
-        if (bleDevice.rssi < rssiFilter) return
-
-        if (addressList.add(bleDevice.address)) {
-            _uiState.update { it.copy(devices = it.devices + bleDevice) }
+    private fun scheduleScanTimeout() {
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = viewModelScope.launch {
+            delay(SCAN_TIMEOUT_MS)
+            if (isScanning) {
+                stopScanning()
+            }
         }
     }
 
     override fun onCleared() {
-        stopScan()
         super.onCleared()
+        scanner.stop()
     }
 }
