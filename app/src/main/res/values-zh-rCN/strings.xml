@@ -81,8 +81,6 @@
     <string name="company_filter">公司过滤</string>
     <string name="ic_empty">空空如也</string>
     <string name="filter">过滤</string>
-    <string name="nav_history">历史记录</string>
-    <string name="scan_search">搜索历史</string>
     <string name="scan_filter">筛选</string>
     <string name="toggle_scan">扫描</string>
     <string name="server_name">蓝牙Webdav上报服务运行中</string>

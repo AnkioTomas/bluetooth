@@ -83,8 +83,6 @@
     <string name="company_filter">Company filter</string>
     <string name="ic_empty">Empty</string>
     <string name="filter">Filter</string>
-    <string name="nav_history">History</string>
-    <string name="scan_search">Search history</string>
     <string name="scan_filter">Filter</string>
     <string name="toggle_scan">Scan</string>
     <string name="server_name">Bluetooth Webdav Service is working</string>
