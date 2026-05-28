@@ -7,25 +7,23 @@ import net.ankio.bluetooth.utils.LocaleDelegate
 import net.ankio.theme.BaseComposeActivity
 
 abstract class BluetoothBaseComposeActivity : BaseComposeActivity() {
+    private var appliedLocaleVersion: Int = -1
 
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase?.let { ContextWrapper.wrap(it, App.getLocale()) })
-        LocaleDelegate.changedList[javaClass] = true
+        appliedLocaleVersion = LocaleDelegate.localeVersion
     }
 
     override fun onResume() {
         super.onResume()
-        if (!LocaleDelegate.changedList.containsKey(javaClass) ||
-            LocaleDelegate.changedList[javaClass] == false
-        ) {
-            LocaleDelegate.changedList[javaClass] = true
+        if (appliedLocaleVersion != LocaleDelegate.localeVersion) {
+            appliedLocaleVersion = LocaleDelegate.localeVersion
             recreate()
         }
     }
 
     protected fun recreateForLocaleChange() {
-        LocaleDelegate.changedList.clear()
-        LocaleDelegate.changedList[javaClass] = true
+        appliedLocaleVersion = LocaleDelegate.localeVersion
         recreate()
     }
 }
