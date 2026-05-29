@@ -19,6 +19,9 @@ class SelfHooker : HookerManifest() {
             "getActiveAndSupportFramework",
             true,
         )
+        Hooker.after("net.ankio.bluetooth.utils.HookUtils", "getAppVersion") { param ->
+            param.result = BuildConfig.VERSION_CODE
+        }
         Hooker.after("net.ankio.bluetooth.utils.HookUtils", "getXposedVersion") { param ->
             param.result = XposedBridge.getXposedVersion()
         }

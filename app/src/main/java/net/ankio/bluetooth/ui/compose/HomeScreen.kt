@@ -5,12 +5,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
@@ -24,15 +32,27 @@ import net.ankio.theme.settings.SettingCardPosition
 import net.ankio.theme.settings.ThemeSectionHeader
 import net.ankio.theme.settings.ThemeSettingDropdown
 
-
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onHomeResume()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     TabPageScaffold(title = stringResource(R.string.nav_home)) {
         HomeScreenContent(
             webdavMode = viewModel.webdavMode,
             simulateMode = viewModel.simulateMode,
-            onWebdavModeChange = {viewModel.webdavMode = it},
-            onSimulateModeChange = {viewModel.simulateMode = it}
+            pluginStatusMessage = viewModel.pluginStatusMessage,
+            pluginStatusKind = viewModel.pluginStatusKind,
+            onWebdavModeChange = { viewModel.webdavMode = it },
+            onSimulateModeChange = { viewModel.simulateMode = it },
         )
     }
 }
@@ -41,6 +61,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 fun HomeScreenContent(
     webdavMode: WebdavMode,
     simulateMode: SimulateMode,
+    pluginStatusMessage: String,
+    pluginStatusKind: StatusKind,
     onWebdavModeChange: (WebdavMode) -> Unit,
     onSimulateModeChange: (SimulateMode) -> Unit,
     modifier: Modifier = Modifier,
@@ -58,9 +80,9 @@ fun HomeScreenContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         StatusBanner(
-            message = stringResource(R.string.active_success),
-            kind = StatusKind.Success,
-            icon = Icons.Default.CloudSync,
+            message = pluginStatusMessage.ifEmpty { stringResource(R.string.active_error) },
+            kind = pluginStatusKind,
+            icon = pluginStatusIcon(pluginStatusKind),
         )
 
         ThemeSectionHeader(stringResource(R.string.home_section_modes))
@@ -68,9 +90,7 @@ fun HomeScreenContent(
         ThemeSettingDropdown(
             items = webdavLabels,
             selectedIndex = webdavIndex,
-            onSelectedIndexChange = {
-                onWebdavModeChange(webdavOptions[it])
-            }, // 直接调用传进来的 Lambda
+            onSelectedIndexChange = { onWebdavModeChange(webdavOptions[it]) },
             title = stringResource(R.string.home_webdav_mode),
             startAction = {
                 Icon(
@@ -85,9 +105,7 @@ fun HomeScreenContent(
         ThemeSettingDropdown(
             items = simulateLabels,
             selectedIndex = simulateIndex,
-            onSelectedIndexChange = {
-                onSimulateModeChange(simulateOptions[it])
-            }, // 直接调用传进来的 Lambda
+            onSelectedIndexChange = { onSimulateModeChange(simulateOptions[it]) },
             title = stringResource(R.string.home_simulate_mode),
             startAction = {
                 Icon(
@@ -99,4 +117,10 @@ fun HomeScreenContent(
             position = SettingCardPosition.Last,
         )
     }
+}
+
+private fun pluginStatusIcon(kind: StatusKind): ImageVector = when (kind) {
+    StatusKind.Error -> Icons.Default.Error
+    StatusKind.Warning -> Icons.Default.Warning
+    StatusKind.Success -> Icons.Default.CheckCircle
 }

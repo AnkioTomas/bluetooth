@@ -3,10 +3,9 @@ package net.ankio.bluetooth.ui.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
-import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
+import net.ankio.bluetooth.ui.compose.preview.PreviewSamples
 import net.ankio.theme.PreviewAllScreen
 import net.ankio.theme.PreviewAllThemes
 import net.ankio.theme.ThemePreviewConfig
@@ -21,8 +20,10 @@ private fun HomeScreenPreview(
         HomeScreenContent(
             webdavMode = WebdavMode.None,
             simulateMode = SimulateMode.None,
+            pluginStatusMessage = stringResource(PreviewSamples.statusMessageRes),
+            pluginStatusKind = PreviewSamples.statusKind,
             onWebdavModeChange = {},
-            onSimulateModeChange = {}
+            onSimulateModeChange = {},
         )
     }
 }
