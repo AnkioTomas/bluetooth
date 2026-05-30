@@ -16,6 +16,7 @@ import net.ankio.bluetooth.ble.BleScanner
 import net.ankio.bluetooth.ble.BluetoothData
 import net.ankio.bluetooth.ble.Rssi
 import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.service.WebdavPushService
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.WebdavUtils
@@ -88,6 +89,7 @@ object WebdavServiceManager {
         val data = BluetoothData(device.data, device.address, device.rssi.toString())
         try {
             WebdavUtils(context.applicationContext).sendToServer(data)
+            WebdavPushService.updateNotification(context.applicationContext)
             PushResult.Ok
         } catch (e: Exception) {
             Log.e(TAG, "pushOnce failed", e)
@@ -102,6 +104,7 @@ object WebdavServiceManager {
     }
 
     private fun schedulePush(context: Context) {
+        WebdavPushService.start(context)
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -138,6 +141,7 @@ object WebdavServiceManager {
     }
 
     private fun cancelPush(context: Context) {
+        WebdavPushService.stop(context)
         WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_PUSH)
     }
 
