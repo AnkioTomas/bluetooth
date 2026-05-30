@@ -239,6 +239,7 @@ private fun ScanDeviceCard(
 @Composable
 private fun ScanFilterSheet(onDismiss: () -> Unit) {
     var filterEmptyName by remember { mutableStateOf(SpUtils.getBoolean(BleConstant.NULL_NAME)) }
+    var filterMac by remember { mutableStateOf(SpUtils.getString(BleConstant.FILTER_MAC, "")) }
     var company by remember { mutableStateOf(SpUtils.getString(BleConstant.COMPANY, "")) }
     var minRssi by remember {
         mutableIntStateOf(
@@ -293,6 +294,15 @@ private fun ScanFilterSheet(onDismiss: () -> Unit) {
                     SpUtils.putInt(BleConstant.RSSI, minRssi)
                 },
                 valueRange = 0f..100f,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ThemeTextField(
+                value = filterMac,
+                onValueChange = {
+                    filterMac = it
+                    SpUtils.putString(BleConstant.FILTER_MAC, it.trim())
+                },
+                label = stringResource(R.string.mac_filter),
                 modifier = Modifier.fillMaxWidth(),
             )
             ThemeTextField(

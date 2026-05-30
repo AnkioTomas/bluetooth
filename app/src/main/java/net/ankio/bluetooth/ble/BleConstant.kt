@@ -14,6 +14,9 @@ class BleConstant {
          */
         const val COMPANY = "company"
 
+        /** 扫描过滤 MAC 地址（与模拟页 pref_mac 独立） */
+        const val FILTER_MAC = "filterMac"
+
         /**
          * 是否过滤设备名称为Null的设备
          */

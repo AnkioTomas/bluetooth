@@ -21,6 +21,7 @@ data class BleScanFilter(
 
     companion object {
         fun fromScanPrefs(): BleScanFilter = BleScanFilter(
+            targetMac = SpUtils.getString(BleConstant.FILTER_MAC, "").trim(),
             companyKeyword = SpUtils.getString(BleConstant.COMPANY, ""),
             filterEmptyName = SpUtils.getBoolean(BleConstant.NULL_NAME),
             minRssiDbm = Rssi.normalizeDbm(SpUtils.getInt(BleConstant.RSSI, Rssi.DEFAULT_FILTER_DBM)),

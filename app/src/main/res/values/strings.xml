@@ -86,6 +86,7 @@
     <string name="filter_empty">Filter empty name</string>
     <string name="signal_filter">Signal strength filter</string>
     <string name="company_filter">Company filter</string>
+    <string name="mac_filter">MAC address filter</string>
     <string name="ic_empty">Empty</string>
     <string name="filter">Filter</string>
     <string name="scan_filter">Filter</string>

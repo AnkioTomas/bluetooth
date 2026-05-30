@@ -84,6 +84,7 @@
     <string name="filter_empty">过滤空蓝牙名称</string>
     <string name="signal_filter">信号强度过滤</string>
     <string name="company_filter">公司过滤</string>
+    <string name="mac_filter">MAC 地址过滤</string>
     <string name="ic_empty">空空如也</string>
     <string name="filter">过滤</string>
     <string name="scan_filter">筛选</string>
