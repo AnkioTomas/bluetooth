@@ -48,10 +48,10 @@ class BleAdvertiserService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // 直接获取参数并启动/重启广播，不再需要判断 Action
+        // startForegroundService() 要求尽快调用 startForeground()，校验失败也要先进入前台再退出
+        enterForeground()
         stopBleAdvertise()
         startBleAdvertise()
-
         return START_NOT_STICKY
     }
 
@@ -88,8 +88,6 @@ class BleAdvertiserService : Service() {
             fail(R.string.simulate_no_config)
             return
         }
-
-        enterForeground()
 
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
