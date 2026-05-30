@@ -20,11 +20,11 @@ class GattServiceHooker : PartHooker() {
 
     override fun hook() {
         if (HookConfig.getString(PrefKeys.SIMULATE_MODE, "") != SimulateMode.Self.toString()) {
-            HookLogManager.d(TAG, "关闭蓝牙模拟功能")
+            HookLogManager.d(TAG, "Local BLE simulation disabled")
             return
         }
 
-        HookLogManager.d(TAG, "蓝牙模拟启动")
+        HookLogManager.d(TAG, "Local BLE simulation started")
         val gattClass = Hooker.loader(GATT_SERVICE)
 
         when {
@@ -91,7 +91,7 @@ class GattServiceHooker : PartHooker() {
                 try {
                     invokeScanResult(getter(gattService), mac, rssi, advData, trailingMac)
                 } catch (e: Throwable) {
-                    HookLogManager.e(TAG, "mock 失败：${e.message}", e)
+                    HookLogManager.e(TAG, "Mock scan injection failed: ${e.message}", e)
                 }
             }
             handler.postDelayed(this, INTERVAL_MS)
@@ -99,7 +99,7 @@ class GattServiceHooker : PartHooker() {
     }
 
     companion object {
-        const val TAG = "AnkioのBluetooth"
+        const val TAG = "BluetoothDebug"
 
         private const val GATT_SERVICE = "com.android.bluetooth.gatt.GattService"
         private const val ADAPTER_SERVICE = "com.android.bluetooth.btservice.AdapterService"
@@ -141,11 +141,14 @@ class GattServiceHooker : PartHooker() {
                     10 -> false
                     else -> continue
                 }
-                HookLogManager.d(TAG, "解析方法: $name")
+                HookLogManager.d(TAG, "Resolved scan target: $name")
                 return getter to trailingMac
             }
 
-            HookLogManager.e(TAG, "您的设备不支持，请提取com.android.bluetooth文件提交至github")
+            HookLogManager.e(
+                TAG,
+                "Unsupported device; export com.android.bluetooth and open a GitHub issue",
+            )
             return null
         }
 

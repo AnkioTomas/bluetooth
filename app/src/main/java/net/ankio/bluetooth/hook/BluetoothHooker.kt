@@ -9,7 +9,7 @@ class BluetoothHooker : HookerManifest() {
 
     override val packageName: String = "com.android.bluetooth"
 
-    override val appName: String = "蓝牙服务"
+    override val appName: String = "Bluetooth Service"
 
     override val systemApp: Boolean = true
 

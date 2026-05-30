@@ -208,7 +208,7 @@ class BleAdvertiserService : Service() {
         // 注意：Android 系统通常会自动添加 Flags。这里我们仅记录，暂不尝试强制修改，
         // 因为强制修改可能需要反射调用隐藏 API 或在某些 ROM 上无效。
         elements.find { it.type == 0x01 }?.let { flagsElement ->
-            Log.d(TAG, "原始数据中的标志位 (Flags): ${ByteUtils.byteArrayToHexString(flagsElement.data)}")
+            Log.d(TAG, "Flags from raw adv data: ${ByteUtils.byteArrayToHexString(flagsElement.data)}")
         }
 
         // 2. 优先添加服务 UUID (Type 0x03)，以保持与原始设备一致的物理顺序
@@ -224,7 +224,7 @@ class BleAdvertiserService : Service() {
                         )
                     )
                     builder.addServiceUuid(ParcelUuid(uuid))
-                    Log.d(TAG, "添加 16 位服务 UUID: 0x${String.format("%04X", (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF))}")
+                    Log.d(TAG, "Added 16-bit service UUID: 0x${String.format("%04X", (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF))}")
                 }
             }
         }
@@ -237,7 +237,7 @@ class BleAdvertiserService : Service() {
                 val manufacturerData = if (fieldData.size > 2) fieldData.sliceArray(2 until fieldData.size) else byteArrayOf()
 
                 builder.addManufacturerData(companyId, manufacturerData)
-                Log.d(TAG, "添加厂商数据: ID=0x${String.format("%04X", companyId)}, 数据长度=${manufacturerData.size}")
+                Log.d(TAG, "Added manufacturer data: id=0x${String.format("%04X", companyId)}, length=${manufacturerData.size}")
             }
         }
 

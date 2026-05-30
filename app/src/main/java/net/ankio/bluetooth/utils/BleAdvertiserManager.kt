@@ -16,8 +16,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import net.ankio.bluetooth.service.BleAdvertiserService
 import java.util.regex.Pattern
 
 /**
@@ -75,7 +74,7 @@ object BleAdvertiserManager {
         private const val PREF_STATE_KEY = "ble_advertiser_state"
 
         fun setEnabled(context: Context, enabled: Boolean) {
-            Log.d(TAG, "设置服务状态: enabled=$enabled")
+            Log.d(TAG, "Service state set: enabled=$enabled")
             SpUtils.putBoolean("pref_ble_advertiser_enabled", enabled)
         }
 
@@ -89,13 +88,19 @@ object BleAdvertiserManager {
             val rssiStr = SpUtils.getString("pref_rssi", BroadcastConfig.DEFAULT_RSSI.toString()).trim()
 
             return when {
-                mac.isEmpty() -> ConfigValidationResult(false, "MAC地址不能为空")
-                !BroadcastConfig.isValidMacAddress(mac) -> ConfigValidationResult(false, "MAC地址格式无效，应为: XX:XX:XX:XX:XX:XX")
-                data.isEmpty() -> ConfigValidationResult(false, "广播数据不能为空")
-                !BroadcastConfig.isValidBroadcastData(data) -> ConfigValidationResult(false, "广播数据格式无效，应为偶数位十六进制字符，且不超过${BroadcastConfig.MAX_DATA_LENGTH * 2}位")
-                rssiStr.isEmpty() -> ConfigValidationResult(false, "信号强度不能为空")
-                !BroadcastConfig.isValidRssi(rssiStr.toIntOrNull() ?: -999) -> ConfigValidationResult(false, "信号强度应在-100到20dBm之间")
-                else -> ConfigValidationResult(true, "配置验证通过")
+                mac.isEmpty() -> ConfigValidationResult(false, "MAC address must not be empty")
+                !BroadcastConfig.isValidMacAddress(mac) ->
+                    ConfigValidationResult(false, "Invalid MAC format, expected XX:XX:XX:XX:XX:XX")
+                data.isEmpty() -> ConfigValidationResult(false, "Broadcast data must not be empty")
+                !BroadcastConfig.isValidBroadcastData(data) ->
+                    ConfigValidationResult(
+                        false,
+                        "Invalid broadcast data: even-length hex, max ${BroadcastConfig.MAX_DATA_LENGTH * 2} chars",
+                    )
+                rssiStr.isEmpty() -> ConfigValidationResult(false, "RSSI must not be empty")
+                !BroadcastConfig.isValidRssi(rssiStr.toIntOrNull() ?: -999) ->
+                    ConfigValidationResult(false, "RSSI must be between -100 and 20 dBm")
+                else -> ConfigValidationResult(true, "Configuration valid")
             }
         }
     }
@@ -117,11 +122,11 @@ object BleAdvertiserManager {
             val hasFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
             val hasAdvertiser = bluetoothLeAdvertiser != null
 
-            Log.d(TAG, "BLE支持检查: 系统特性=$hasFeature, 广播器=$hasAdvertiser")
+            Log.d(TAG, "BLE support check: systemFeature=$hasFeature, advertiser=$hasAdvertiser")
 
             hasFeature && hasAdvertiser
         } catch (e: Exception) {
-            Log.e(TAG, "检查BLE广播支持时发生错误", e)
+            Log.e(TAG, "Failed to check BLE advertising support", e)
             false
         }
     }
@@ -132,14 +137,14 @@ object BleAdvertiserManager {
     fun checkCompatibility(context: Context): CompatibilityResult {
         try {
             if (!isBleAdvertisingSupported(context)) {
-                return CompatibilityResult(false, "设备不支持BLE广播功能")
+                return CompatibilityResult(false, "Device does not support BLE advertising")
             }
 
-            return CompatibilityResult(true, "设备兼容BLE广播功能")
+            return CompatibilityResult(true, "Device supports BLE advertising")
 
         } catch (e: Exception) {
-            Log.e(TAG, "兼容性检查时发生错误", e)
-            return CompatibilityResult(false, "兼容性检查失败: ${e.message}")
+            Log.e(TAG, "Compatibility check failed", e)
+            return CompatibilityResult(false, "Compatibility check error: ${e.message}")
         }
     }
 
@@ -191,7 +196,7 @@ object BleAdvertiserManager {
             val bluetoothAdapter = bluetoothManager?.adapter
             bluetoothAdapter?.isEnabled == true
         } catch (e: Exception) {
-            Log.e(TAG, "检查蓝牙状态时发生错误", e)
+            Log.e(TAG, "Failed to read Bluetooth adapter state", e)
             false
         }
     }
@@ -205,7 +210,7 @@ object BleAdvertiserManager {
             val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             activity.startActivityForResult(intent, BLUETOOTH_ENABLE_REQUEST_CODE)
         } catch (e: Exception) {
-            Log.e(TAG, "请求开启蓝牙时发生错误", e)
+            Log.e(TAG, "Failed to request Bluetooth enable", e)
         }
     }
 
@@ -216,30 +221,21 @@ object BleAdvertiserManager {
         try {
             val compatibility = checkCompatibility(context)
             if (!compatibility.isCompatible) {
-                Log.e(TAG, "设备不兼容: ${compatibility.message}")
+                Log.e(TAG, "Device incompatible: ${compatibility.message}")
                 throw RuntimeException(compatibility.message)
             }
 
             val configValidation = ServiceState.validateConfiguration(context)
             if (!configValidation.isValid) {
-                Log.e(TAG, "配置验证失败: ${configValidation.message}")
+                Log.e(TAG, "Invalid configuration: ${configValidation.message}")
                 throw RuntimeException(configValidation.message)
             }
 
-            val intent = Intent(context, net.ankio.bluetooth.service.BleAdvertiserService::class.java).apply {
-                action = net.ankio.bluetooth.service.BleAdvertiserService.ACTION_START_ADVERTISING
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ContextCompat.startForegroundService(context, intent)
-            } else {
-                context.startService(intent)
-            }
-
-            Log.i(TAG, "BLE广播启动请求已发送")
+            BleAdvertiserService.start(context)
+            Log.i(TAG, "BLE advertising start requested")
 
         } catch (e: Exception) {
-            Log.e(TAG, "启动BLE广播失败", e)
+            Log.e(TAG, "Failed to start BLE advertising", e)
             throw e
         }
     }
@@ -249,15 +245,11 @@ object BleAdvertiserManager {
      */
     fun stopAdvertising(context: Context) {
         try {
-            val intent = Intent(context, net.ankio.bluetooth.service.BleAdvertiserService::class.java).apply {
-                action = net.ankio.bluetooth.service.BleAdvertiserService.ACTION_STOP_ADVERTISING
-            }
-            context.startService(intent)
-
-            Log.i(TAG, "BLE广播停止请求已发送")
+            BleAdvertiserService.stop(context)
+            Log.i(TAG, "BLE advertising stop requested")
 
         } catch (e: Exception) {
-            Log.e(TAG, "停止BLE广播失败", e)
+            Log.e(TAG, "Failed to stop BLE advertising", e)
             throw e
         }
     }
@@ -267,15 +259,11 @@ object BleAdvertiserManager {
      */
     fun updateAdvertisingConfig(context: Context) {
         try {
-            val intent = Intent(context, net.ankio.bluetooth.service.BleAdvertiserService::class.java).apply {
-                action = net.ankio.bluetooth.service.BleAdvertiserService.ACTION_UPDATE_CONFIG
-            }
-            context.startService(intent)
-
-            Log.i(TAG, "BLE广播配置更新请求已发送")
+            BleAdvertiserService.start(context)
+            Log.i(TAG, "BLE advertising config update requested")
 
         } catch (e: Exception) {
-            Log.e(TAG, "更新广播配置失败", e)
+            Log.e(TAG, "Failed to update BLE advertising config", e)
         }
     }
 
@@ -287,7 +275,7 @@ object BleAdvertiserManager {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val event = intent?.getStringExtra("event") ?: return
                 val message = intent.getStringExtra("message")
-                Log.d(TAG, "收到Service事件: $event, message: $message")
+                Log.d(TAG, "Service event: $event, message: $message")
                 callback(event, message)
             }
         }
@@ -308,7 +296,7 @@ object BleAdvertiserManager {
         try {
             context.unregisterReceiver(receiver)
         } catch (e: Exception) {
-            Log.e(TAG, "取消注册广播接收器失败", e)
+            Log.e(TAG, "Failed to unregister event receiver", e)
         }
     }
 
@@ -330,7 +318,7 @@ object BleAdvertiserManager {
             val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             bluetoothManager?.adapter?.bluetoothLeAdvertiser
         } catch (e: Exception) {
-            Log.e(TAG, "获取BLE广播器时发生错误", e)
+            Log.e(TAG, "Failed to get BLE advertiser", e)
             null
         }
     }
@@ -342,7 +330,7 @@ object BleAdvertiserManager {
         return try {
             SpUtils.getBoolean("pref_ble_advertiser_enabled", false)
         } catch (e: Exception) {
-            Log.e(TAG, "检查服务状态时发生错误", e)
+            Log.e(TAG, "Failed to read service state", e)
             false
         }
     }

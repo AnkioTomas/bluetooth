@@ -16,7 +16,7 @@ private fun StatusBarPreview(
 ) {
     PreviewAllThemes(config) {
         StatusBanner(
-            message = "激活",
+            message = "Plugin activated",
             kind = StatusKind.Error,
             icon = Icons.Default.Error,
         )

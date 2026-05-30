@@ -6,7 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import net.ankio.bluetooth.ui.MainActivity
+import net.ankio.bluetooth.R
 import net.ankio.bluetooth.utils.BleAdvertiserManager
 
 /**
@@ -50,11 +50,7 @@ class BleAdvertiserTileService : TileService() {
     private fun updateTile() {
         val tile = qsTile ?: return
         tile.state = if (isAdvertising) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = if (isAdvertising) {
-            "BLE广播服务"
-        } else {
-            "BLE广播服务"
-        }
+        tile.label = getString(R.string.ble_advertiser_title)
         tile.icon = android.graphics.drawable.Icon.createWithResource(
             this,
             net.ankio.bluetooth.R.drawable.ic_ble_tile

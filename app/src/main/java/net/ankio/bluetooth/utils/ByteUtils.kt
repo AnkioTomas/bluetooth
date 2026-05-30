@@ -1,6 +1,5 @@
 package net.ankio.bluetooth.utils
 
-import android.util.Log
 import java.util.Locale
 import kotlin.experimental.xor
 
@@ -28,7 +27,6 @@ object ByteUtils {
             byteArrayResult[i] = (charToByte(hexChars[pos]).toInt()
                 .shl(4) or charToByte(hexChars[pos + 1]).toInt()).toByte()
         }
-        Log.d("TAG", "hexStringToBytes: " + byteArrayResult.contentToString())
         return byteArrayResult
     }
 

@@ -30,7 +30,7 @@ object HookLogManager {
     /**
      * 默认的日志标签
      */
-    private const val DEFAULT_TAG = "AnkioのBluetooth"
+    private const val DEFAULT_TAG = "BluetoothDebug"
 
     
     /**
