@@ -22,6 +22,8 @@
     <string name="nav_settings">Settings</string>
     <string name="sync_from_webdav">Pull from WebDAV</string>
     <string name="sync_pull_success">Synced from WebDAV</string>
+    <string name="sync_push_success">Sent to WebDAV</string>
+    <string name="webdav_push_not_found">Target device not found nearby</string>
     <string name="webdav_not_configured">Configure WebDAV in Settings first</string>
     <string name="webdav_no_target">Set a target MAC on the Simulate tab first</string>
     <string name="webdav_last_sync">Last sync: %1$s</string>

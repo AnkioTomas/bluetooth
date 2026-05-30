@@ -22,6 +22,8 @@
     <string name="nav_settings">设置</string>
     <string name="sync_from_webdav">从 WebDAV 拉取</string>
     <string name="sync_pull_success">已从 WebDAV 同步</string>
+    <string name="sync_push_success">已发送到 WebDAV</string>
+    <string name="webdav_push_not_found">附近未扫描到目标设备</string>
     <string name="webdav_not_configured">请先在设置中配置 WebDAV</string>
     <string name="webdav_no_target">请先在模拟页设置目标 MAC</string>
     <string name="webdav_last_sync">上次同步：%1$s</string>
