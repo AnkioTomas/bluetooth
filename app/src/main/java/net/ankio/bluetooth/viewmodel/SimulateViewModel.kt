@@ -1,6 +1,5 @@
 package net.ankio.bluetooth.viewmodel
 
-import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import net.ankio.bluetooth.utils.PersistedStateDelegate
 import net.ankio.bluetooth.utils.PrefKeys
@@ -17,21 +16,11 @@ class SimulateViewModel : ViewModel() {
     var prefData: String by dataState
     var prefRssi: String by rssiState
 
-    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        when (key) {
-            PrefKeys.PREF_MAC -> macState.reload(SpUtils.getString(PrefKeys.PREF_MAC, ""))
-            PrefKeys.PREF_DATA -> dataState.reload(SpUtils.getString(PrefKeys.PREF_DATA, ""))
-            PrefKeys.PREF_RSSI -> rssiState.reload(SpUtils.getString(PrefKeys.PREF_RSSI, "-65"))
-        }
-    }
 
-    init {
-        SpUtils.registerChangeListener(prefListener)
-    }
-
-    override fun onCleared() {
-        SpUtils.unregisterChangeListener(prefListener)
-        super.onCleared()
+    fun reloadFromPrefs() {
+        macState.reload(SpUtils.getString(PrefKeys.PREF_MAC, ""))
+        dataState.reload(SpUtils.getString(PrefKeys.PREF_DATA, ""))
+        rssiState.reload(SpUtils.getString(PrefKeys.PREF_RSSI, "-65"))
     }
 
     private fun prefState(key: String, default: String): PersistedStateDelegate<String> =

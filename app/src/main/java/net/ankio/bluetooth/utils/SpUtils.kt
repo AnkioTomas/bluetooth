@@ -53,33 +53,6 @@ class SpUtils private constructor(
     fun getLong(key: String, default: Long = 0): Long =
         sp.getLong(key, default)
 
-    fun registerChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-        synchronized(changeListeners) {
-            changeListeners.add(listener)
-            if (!changeListenerRegistered) {
-                sp.registerOnSharedPreferenceChangeListener { prefs, key ->
-                    synchronized(changeListeners) {
-                        changeListeners.toList().forEach {
-                            it.onSharedPreferenceChanged(prefs, key)
-                        }
-                    }
-                }
-                changeListenerRegistered = true
-            }
-        }
-    }
-
-    fun unregisterChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-        synchronized(changeListeners) {
-            changeListeners.remove(listener)
-        }
-    }
-
-    private val changeListeners =
-        mutableListOf<SharedPreferences.OnSharedPreferenceChangeListener>()
-
-    private var changeListenerRegistered = false
-
     companion object {
         private const val PREF_NAME = "config"
 
@@ -108,11 +81,5 @@ class SpUtils private constructor(
 
         fun getLong(key: String, default: Long = 0): Long =
             instance.getLong(key, default)
-
-        fun registerChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
-            instance.registerChangeListener(listener)
-
-        fun unregisterChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
-            instance.unregisterChangeListener(listener)
     }
 }
