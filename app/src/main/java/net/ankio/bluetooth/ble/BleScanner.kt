@@ -5,7 +5,9 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -80,10 +82,20 @@ class BleScanner(context: Context) {
      * 扫描直到命中 [filter] 或超时，命中后立即停止扫描。
      */
     suspend fun scanOnce(filter: BleScanFilter, timeoutMs: Long): BleDevice? {
-        if (!hasScanPermissions()) return null
+        if (!BlePermissions.hasScan(appContext)) {
+            Log.w(TAG, "scanOnce: missing BLE permissions")
+            return null
+        }
         val adapter = bluetoothAdapter ?: return null
-        if (!adapter.isEnabled) return null
+        if (!adapter.isEnabled) {
+            Log.w(TAG, "scanOnce: bluetooth disabled")
+            return null
+        }
         val scanner = adapter.bluetoothLeScanner ?: return null
+        val hardwareFilters = buildHardwareFilters(filter)
+        val scanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
 
         return withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine { cont ->
@@ -95,16 +107,35 @@ class BleScanner(context: Context) {
                         stopScan(scanner, this)
                         cont.resume(device)
                     }
+
+                    override fun onScanFailed(errorCode: Int) {
+                        Log.w(TAG, "scanOnce failed: errorCode=$errorCode")
+                        if (cont.isActive) cont.resume(null)
+                    }
                 }
                 cont.invokeOnCancellation { stopScan(scanner, callback) }
                 try {
-                    scanner.startScan(callback)
+                    if (hardwareFilters.isEmpty()) {
+                        scanner.startScan(callback)
+                    } else {
+                        scanner.startScan(hardwareFilters, scanSettings, callback)
+                    }
                 } catch (e: SecurityException) {
                     Log.w(TAG, "startScan denied", e)
                     if (cont.isActive) cont.resume(null)
                 }
             }
         }
+    }
+
+    private fun buildHardwareFilters(filter: BleScanFilter): List<ScanFilter> {
+        val mac = filter.targetMac.trim()
+        if (mac.isEmpty()) return emptyList()
+        return listOf(
+            ScanFilter.Builder()
+                .setDeviceAddress(mac)
+                .build(),
+        )
     }
 
     /**
@@ -185,29 +216,7 @@ class BleScanner(context: Context) {
     /**
      * 启动/停止扫描所需权限（内联 [ContextCompat.checkSelfPermission]，供 Lint 识别）。
      */
-    private fun hasScanPermissions(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(
-                    appContext,
-                    Manifest.permission.BLUETOOTH_SCAN,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return false
-            }
-            if (ContextCompat.checkSelfPermission(
-                    appContext,
-                    Manifest.permission.BLUETOOTH_CONNECT,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return false
-            }
-            return true
-        }
-        return ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
-    }
+    private fun hasScanPermissions(): Boolean = BlePermissions.hasScan(appContext)
 
     /**
      * 读取 [android.bluetooth.BluetoothDevice] 名称/地址所需权限（内联检查）。
