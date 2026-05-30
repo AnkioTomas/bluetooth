@@ -23,7 +23,7 @@
     <string name="sync_from_webdav">从 WebDAV 拉取</string>
     <string name="sync_pull_success">已从 WebDAV 同步</string>
     <string name="webdav_not_configured">请先在设置中配置 WebDAV</string>
-    <string name="webdav_no_target">请先在模拟页设置目标 MAC 或厂商名称</string>
+    <string name="webdav_no_target">请先在模拟页设置目标 MAC</string>
     <string name="webdav_last_sync">上次同步：%1$s</string>
     <string name="device_selected_to_simulate">已应用设备，可在模拟页编辑。</string>
     <string name="status_mock_on">本机模拟已启用</string>

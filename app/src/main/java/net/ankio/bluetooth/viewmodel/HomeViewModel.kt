@@ -1,20 +1,37 @@
 package net.ankio.bluetooth.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import net.ankio.bluetooth.BuildConfig
+import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.ui.compose.components.StatusKind
+import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.utils.persistedState
+import net.ankio.bluetooth.webdav.WebdavServiceManager
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+
+    init {
+
+        viewModelScope.launch {
+            WebdavServiceManager.applyMode(getApplication(), WebdavMode.current())
+        }
+    }
 
     var webdavMode: WebdavMode by persistedState(
-        initialValue = WebdavMode.current(),
-        debounceMs = 0L,
+        initialValue = WebdavMode.current()
     ) { value ->
         SpUtils.putString(PrefKeys.WEBDAV_MODE, value.name)
-        // TODO 这里需要额外的操作（启动webdav服务）
+        WebdavServiceManager.applyMode(getApplication(), value)
     }
 
     var simulateMode: SimulateMode by persistedState(
@@ -24,4 +41,34 @@ class HomeViewModel : ViewModel() {
         // TODO 这里需要额外的操作（启动外围模拟）
     }
 
+    var pluginStatusMessage by mutableStateOf("")
+        private set
+    var pluginStatusKind by mutableStateOf(StatusKind.Success)
+        private set
+
+    init {
+        refreshPluginStatus()
+        viewModelScope.launch {
+            WebdavServiceManager.applyMode(getApplication(), WebdavMode.current(), showToast = false)
+        }
+    }
+
+    fun onHomeResume() {
+        refreshPluginStatus()
+    }
+
+    fun refreshPluginStatus() {
+        val ctx = getApplication<Application>()
+        val (message, kind) = when {
+            !HookUtils.getActiveAndSupportFramework() ->
+                ctx.getString(R.string.active_error) to StatusKind.Error
+            HookUtils.getXposedVersion() < HookUtils.MIN_XPOSED_VERSION ->
+                ctx.getString(R.string.active_version) to StatusKind.Warning
+            HookUtils.getAppVersion() != BuildConfig.VERSION_CODE ->
+                ctx.getString(R.string.active_restart) to StatusKind.Warning
+            else -> ctx.getString(R.string.active_success) to StatusKind.Success
+        }
+        pluginStatusMessage = message
+        pluginStatusKind = kind
+    }
 }

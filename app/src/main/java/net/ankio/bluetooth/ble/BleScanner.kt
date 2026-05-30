@@ -3,19 +3,23 @@ package net.ankio.bluetooth.ble
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import net.ankio.bluetooth.data.BluetoothData
 import net.ankio.bluetooth.utils.ByteUtils
-import net.ankio.bluetooth.utils.SpUtils
+import kotlin.coroutines.resume
 
 /**
- * BLE 扫描器：负责启动/停止扫描，并按本地筛选配置过滤结果。
+ * BLE 扫描器：负责启动/停止扫描，并按 [BleScanFilter] 过滤结果。
  *
  * 权限：调用方（如 [net.ankio.bluetooth.ui.MainActivity]）须在进扫描页前申请
  * 定位 +（Android 12+）BLUETOOTH_SCAN / BLUETOOTH_CONNECT。
@@ -31,12 +35,22 @@ class BleScanner(context: Context) {
     private var running = false
 
     /**
-     * 启动扫描。
+     * 启动扫描，使用扫描页保存的过滤条件。
      *
      * @param onDeviceFound 命中过滤条件后的设备回调
      * @return true 表示扫描已成功启动；false 表示权限或蓝牙状态不满足
      */
-    fun start(onDeviceFound: (BleDevice) -> Unit): Boolean {
+    fun start(onDeviceFound: (BleDevice) -> Unit): Boolean =
+        start(BleScanFilter.fromScanPrefs(), onDeviceFound)
+
+    /**
+     * 启动扫描。
+     *
+     * @param filter 本次扫描使用的过滤条件
+     * @param onDeviceFound 命中过滤条件后的设备回调
+     * @return true 表示扫描已成功启动；false 表示权限或蓝牙状态不满足
+     */
+    fun start(filter: BleScanFilter, onDeviceFound: (BleDevice) -> Unit): Boolean {
         if (running) return true
         if (!hasScanPermissions()) return false
 
@@ -47,7 +61,7 @@ class BleScanner(context: Context) {
         scanCallback = object : ScanCallback() {
             @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                emitScanResult(result, onDeviceFound)
+                toBleDevice(result, filter)?.let(onDeviceFound)
             }
         }
 
@@ -59,6 +73,37 @@ class BleScanner(context: Context) {
             running = false
             scanCallback = null
             false
+        }
+    }
+
+    /**
+     * 扫描直到命中 [filter] 或超时，命中后立即停止扫描。
+     */
+    suspend fun scanOnce(filter: BleScanFilter, timeoutMs: Long): BleDevice? {
+        if (!hasScanPermissions()) return null
+        val adapter = bluetoothAdapter ?: return null
+        if (!adapter.isEnabled) return null
+        val scanner = adapter.bluetoothLeScanner ?: return null
+
+        return withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine { cont ->
+                val callback = object : ScanCallback() {
+                    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                    override fun onScanResult(callbackType: Int, result: ScanResult) {
+                        val device = toBleDevice(result, filter) ?: return
+                        if (!cont.isActive) return
+                        stopScan(scanner, this)
+                        cont.resume(device)
+                    }
+                }
+                cont.invokeOnCancellation { stopScan(scanner, callback) }
+                try {
+                    scanner.startScan(callback)
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "startScan denied", e)
+                    if (cont.isActive) cont.resume(null)
+                }
+            }
         }
     }
 
@@ -106,44 +151,30 @@ class BleScanner(context: Context) {
         }
     }
 
-    /**
-     * 解析单条扫描结果并回调。须在已通过 [hasConnectPermission] 的路径内调用。
-     */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    private fun emitScanResult(result: ScanResult, onDeviceFound: (BleDevice) -> Unit) {
-        if (!hasConnectPermission()) return
+    private fun toBleDevice(result: ScanResult, filter: BleScanFilter): BleDevice? {
+        if (!hasConnectPermission()) return null
 
-        val scanRecord = result.scanRecord?.bytes ?: return
+        val scanRecord = result.scanRecord?.bytes ?: return null
         val companyName = bluetoothData.parseManufacturerData(scanRecord) ?: "None"
         val name = bluetoothData.parseLocalName(scanRecord) ?: result.device.name
-        if (!matchesFilter(companyName, name, result.rssi)) return
+        if (!filter.matches(companyName, name, result.rssi, result.device.address)) return null
 
-        onDeviceFound(
-            BleDevice(
-                data = ByteUtils.bytesToHexString(scanRecord) ?: "",
-                company = companyName.ifBlank { "None" },
-                rssi = Rssi.normalizeDbm(result.rssi, result.rssi),
-                address = result.device.address,
-                name = if (name.isNullOrBlank()) "None" else name,
-            ),
+        return BleDevice(
+            data = ByteUtils.bytesToHexString(scanRecord) ?: "",
+            company = companyName.ifBlank { "None" },
+            rssi = Rssi.normalizeDbm(result.rssi, result.rssi),
+            address = result.device.address,
+            name = if (name.isNullOrBlank()) "None" else name,
         )
     }
 
-    /**
-     * 按本地设置过滤扫描结果：
-     * - 过滤空设备名
-     * - 厂商关键字匹配
-     * - 最低 RSSI 阈值
-     */
-    private fun matchesFilter(companyName: String, name: String?, rssi: Int): Boolean {
-        val filterEmptyName = SpUtils.getBoolean(BleConstant.NULL_NAME)
-        if (filterEmptyName && name.isNullOrBlank()) return false
-
-        val company = SpUtils.getString(BleConstant.COMPANY, "")
-        if (company.isNotEmpty() && !companyName.contains(company, ignoreCase = true)) return false
-
-        val minRssi = Rssi.normalizeDbm(SpUtils.getInt(BleConstant.RSSI, Rssi.DEFAULT_FILTER_DBM))
-        return rssi >= minRssi
+    private fun stopScan(scanner: BluetoothLeScanner, callback: ScanCallback) {
+        try {
+            scanner.stopScan(callback)
+        } catch (e: Exception) {
+            Log.w(TAG, "stopScan failed", e)
+        }
     }
 
     private fun clearRunningState() {
@@ -192,5 +223,9 @@ class BleScanner(context: Context) {
             appContext,
             Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    companion object {
+        private const val TAG = "BleScanner"
     }
 }

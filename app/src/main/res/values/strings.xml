@@ -23,7 +23,7 @@
     <string name="sync_from_webdav">Pull from WebDAV</string>
     <string name="sync_pull_success">Synced from WebDAV</string>
     <string name="webdav_not_configured">Configure WebDAV in Settings first</string>
-    <string name="webdav_no_target">Set a target MAC or company name on the Simulate tab first</string>
+    <string name="webdav_no_target">Set a target MAC on the Simulate tab first</string>
     <string name="webdav_last_sync">Last sync: %1$s</string>
     <string name="device_selected_to_simulate">Device applied. Open Simulate tab to edit.</string>
     <string name="status_mock_on">Local simulation enabled</string>

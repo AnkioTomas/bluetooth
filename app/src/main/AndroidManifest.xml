@@ -21,6 +21,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -34,15 +35,15 @@
         android:theme="@style/AppTheme"
         tools:targetApi="31">
         <service
-            android:name=".service.SendWebdavServer"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location" />
-        <service
             android:name=".service.BleAdvertiserService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="connectedDevice"
+            tools:node="merge" />
 
         <activity
             android:name=".ui.MainActivity"
