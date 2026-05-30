@@ -14,7 +14,7 @@ class WebdavUtils(private val context: Context) {
     private val client = WebDav.client(context)
 
     suspend fun sendToServer(bluetoothData: BluetoothData) {
-        Log.i(TAG, "Send Bluetooth to Webdav")
+        Log.i(TAG, "Sending Bluetooth data to WebDAV")
         ensureBluetoothDir()
         val json = Gson().toJson(bluetoothData)
         if (client.exists(BLUETOOTH_FILE)) {

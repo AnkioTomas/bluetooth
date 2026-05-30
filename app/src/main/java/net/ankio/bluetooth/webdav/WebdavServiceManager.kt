@@ -69,7 +69,7 @@ object WebdavServiceManager {
     }
 
     suspend fun pushOnce(context: Context): PushResult = withContext(Dispatchers.IO) {
-        Log.d(TAG,"pushOnce: start")
+        Log.d(TAG, "pushOnce: start")
         if (!isConfigured(context)) return@withContext PushResult.NotConfigured
         if (!BlePermissions.hasScan(context.applicationContext)) {
             Log.w(TAG, "pushOnce: missing BLE permissions")
