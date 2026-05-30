@@ -114,4 +114,5 @@
     <string name="ble_advertiser_failed_data_too_large">广播数据过大</string>
     <string name="ble_advertiser_failed_internal">内部错误</string>
     <string name="ble_advertiser_unknown_error">未知错误: %1$d</string>
+    <string name="ble_advertiser_timeout">广播已运行 10 分钟，自动停止</string>
 </resources>

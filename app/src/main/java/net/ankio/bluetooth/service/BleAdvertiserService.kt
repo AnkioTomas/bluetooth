@@ -17,6 +17,13 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ble.BlePermissions
 import net.ankio.bluetooth.utils.ByteUtils
@@ -31,6 +38,8 @@ class BleAdvertiserService : Service() {
     private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
     private var advertiseCallback: AdvertiseCallback? = null
     private var showToastOnError = false
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var timeoutJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -54,8 +63,10 @@ class BleAdvertiserService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        cancelTimeout()
         stopBleAdvertise()
         isRunning = false
+        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -100,6 +111,7 @@ class BleAdvertiserService : Service() {
         advertiseCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                 isRunning = true
+                scheduleTimeout()
             }
 
             override fun onStartFailure(errorCode: Int) {
@@ -121,6 +133,7 @@ class BleAdvertiserService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun stopBleAdvertise() {
+        cancelTimeout()
         advertiseCallback?.let { callback ->
             if (BlePermissions.hasAdvertise(this)) {
                 runCatching { bluetoothLeAdvertiser?.stopAdvertising(callback) }
@@ -145,6 +158,21 @@ class BleAdvertiserService : Service() {
         if (showToastOnError) {
             ThemeToast.show(message, ThemeToast.Style.Error)
         }
+    }
+
+    private fun scheduleTimeout() {
+        cancelTimeout()
+        timeoutJob = serviceScope.launch {
+            delay(ADVERTISE_TIMEOUT_MS)
+            Log.i(TAG, "advertising timeout after ${ADVERTISE_TIMEOUT_MS / 60_000} minutes")
+            ThemeToast.show(getString(R.string.ble_advertiser_timeout), ThemeToast.Style.Info)
+            stopAndQuit()
+        }
+    }
+
+    private fun cancelTimeout() {
+        timeoutJob?.cancel()
+        timeoutJob = null
     }
 
     private fun createNotificationChannel() {
@@ -274,6 +302,7 @@ class BleAdvertiserService : Service() {
         private const val CHANNEL_ID = "ble_advertiser_channel"
         private const val NOTIFICATION_ID = 2001
         private const val EXTRA_SHOW_TOAST = "show_toast"
+        private const val ADVERTISE_TIMEOUT_MS = 10 * 60 * 1000L
 
         const val ACTION_START = "net.ankio.bluetooth.ADVERTISE_START"
         const val ACTION_STOP = "net.ankio.bluetooth.ADVERTISE_STOP"
