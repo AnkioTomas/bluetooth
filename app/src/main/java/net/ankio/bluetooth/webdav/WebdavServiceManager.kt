@@ -30,25 +30,17 @@ object WebdavServiceManager {
     fun isConfigured(context: Context): Boolean =
         WebDavConfigStore.load(context).isValid()
 
-    fun hasTargetMac(): Boolean =
-        SpUtils.getString(PrefKeys.PREF_MAC, "").trim().isNotEmpty()
-
     suspend fun applyMode(context: Context, mode: WebdavMode, showToast: Boolean = true) {
         val app = context.applicationContext
         when (mode) {
             WebdavMode.None -> stopAll(app)
             WebdavMode.Sender2Webdav -> {
                 stopPull(app)
-                when {
-                    !isConfigured(app) -> {
-                        stopPush(app)
-                        if (showToast) toastError(app, R.string.webdav_not_configured)
-                    }
-                    !hasTargetMac() -> {
-                        stopPush(app)
-                        if (showToast) toastError(app, R.string.webdav_no_target)
-                    }
-                    else -> startPush(app, showToast)
+                if (!isConfigured(app)) {
+                    stopPush(app)
+                    if (showToast) toastError(app, R.string.webdav_not_configured)
+                } else {
+                    startPush(app, showToast)
                 }
             }
             WebdavMode.SyncFromWebdav -> {
@@ -83,25 +75,19 @@ object WebdavServiceManager {
             Log.w(TAG, "pushOnce: missing BLE permissions")
             return@withContext PushResult.NoPermission
         }
-        val mac = SpUtils.getString(PrefKeys.PREF_MAC, "").trim()
-        Log.d(TAG,"pushOnce: filter mac $mac")
-        if (mac.isEmpty()) return@withContext PushResult.NoMac
+        val filter = BleScanFilter.fromScanPrefs()
+        Log.d(TAG, "pushOnce: filter=$filter")
 
         val scanned = BleScanner(context.applicationContext).scanOnce(
-            BleScanFilter.forMac(mac),
+            filter,
             SCAN_TIMEOUT_MS,
+        ) ?: return@withContext PushResult.NotFound
+
+        val data = BluetoothData(
+            scanned.data,
+            scanned.address,
+            scanned.rssi.toString(),
         )
-        val data = when {
-            scanned != null -> BluetoothData(
-                scanned.data,
-                scanned.address,
-                scanned.rssi.toString(),
-            )
-            else -> {
-                Log.w(TAG, "pushOnce: scan miss for $mac, fallback to pref data")
-                readPrefBluetoothData(mac) ?: return@withContext PushResult.NotFound
-            }
-        }
 
         try {
             WebdavUtils(context.applicationContext).sendToServer(data)
@@ -111,16 +97,6 @@ object WebdavServiceManager {
             Log.e(TAG, "pushOnce failed", e)
             PushResult.Failed
         }
-    }
-
-    private fun readPrefBluetoothData(mac: String): BluetoothData? {
-        val prefData = SpUtils.getString(PrefKeys.PREF_DATA, "").trim()
-        if (prefData.isEmpty()) return null
-        return BluetoothData(
-            prefData,
-            mac,
-            SpUtils.getString(PrefKeys.PREF_RSSI, "-65"),
-        )
     }
 
     private fun applyRemoteToPref(data: BluetoothData) {
@@ -158,5 +134,5 @@ object WebdavServiceManager {
 
     enum class PullResult { Ok, Empty, Failed, NotConfigured }
 
-    enum class PushResult { Ok, NotFound, Failed, NotConfigured, NoMac, NoPermission }
+    enum class PushResult { Ok, NotFound, Failed, NotConfigured, NoPermission }
 }

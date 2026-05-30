@@ -81,9 +81,7 @@ class WebdavPushService : Service() {
                     showToast = false
                 }
                 when (result) {
-                    WebdavServiceManager.PushResult.NotConfigured,
-                    WebdavServiceManager.PushResult.NoMac,
-                    -> return@launch
+                    WebdavServiceManager.PushResult.NotConfigured -> return@launch
                     WebdavServiceManager.PushResult.NoPermission -> {
                         delay(30_000L)
                         continue@loop
@@ -136,7 +134,6 @@ class WebdavPushService : Service() {
             WebdavServiceManager.PushResult.NotFound -> getString(R.string.webdav_push_not_found) to ThemeToast.Style.Error
             WebdavServiceManager.PushResult.Failed -> getString(R.string.webdav_error) to ThemeToast.Style.Error
             WebdavServiceManager.PushResult.NotConfigured -> getString(R.string.webdav_not_configured) to ThemeToast.Style.Error
-            WebdavServiceManager.PushResult.NoMac -> getString(R.string.webdav_no_target) to ThemeToast.Style.Error
             WebdavServiceManager.PushResult.NoPermission -> getString(R.string.no_permission) to ThemeToast.Style.Error
         }
         ThemeToast.show(message, style)

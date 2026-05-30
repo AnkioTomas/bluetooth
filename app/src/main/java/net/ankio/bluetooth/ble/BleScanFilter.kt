@@ -25,7 +25,5 @@ data class BleScanFilter(
             filterEmptyName = SpUtils.getBoolean(BleConstant.NULL_NAME),
             minRssiDbm = Rssi.normalizeDbm(SpUtils.getInt(BleConstant.RSSI, Rssi.DEFAULT_FILTER_DBM)),
         )
-
-        fun forMac(mac: String): BleScanFilter = BleScanFilter(targetMac = mac.trim())
     }
 }
