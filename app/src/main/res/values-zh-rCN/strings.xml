@@ -102,4 +102,16 @@
     <string name="ble_advertiser_desc">作为BLE外围设备广播模拟数据</string>
     <string name="ble_advertiser_active">正在作为BLE设备广播</string>
     <string name="ble_advertiser_inactive">BLE外围服务已关闭</string>
+    <string name="ble_advertiser_not_supported">此设备不支持 BLE 广播</string>
+    <string name="ble_advertiser_start_failed">启动 BLE 广播失败</string>
+    <string name="simulate_no_config">请先在模拟页配置 MAC 和广播数据</string>
+    <string name="ble_advertiser_invalid_mac">MAC 地址无效</string>
+    <string name="ble_advertiser_invalid_data">广播数据无效</string>
+    <string name="ble_advertiser_invalid_rssi">信号强度无效</string>
+    <string name="ble_advertiser_invalid_data_format">广播数据格式错误</string>
+    <string name="ble_advertiser_failed_too_many">广播实例数量已达上限</string>
+    <string name="ble_advertiser_failed_already_started">广播已经在运行</string>
+    <string name="ble_advertiser_failed_data_too_large">广播数据过大</string>
+    <string name="ble_advertiser_failed_internal">内部错误</string>
+    <string name="ble_advertiser_unknown_error">未知错误: %1$d</string>
 </resources>

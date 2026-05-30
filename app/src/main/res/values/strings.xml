@@ -105,4 +105,16 @@
     <string name="ble_advertiser_desc">Broadcast as a BLE peripheral device with simulated data</string>
     <string name="ble_advertiser_active">Broadcasting as BLE device</string>
     <string name="ble_advertiser_inactive">BLE peripheral service disabled</string>
+    <string name="ble_advertiser_not_supported">This device does not support BLE advertising</string>
+    <string name="ble_advertiser_start_failed">Failed to start BLE advertising</string>
+    <string name="simulate_no_config">Configure MAC and broadcast data on the Simulate tab first</string>
+    <string name="ble_advertiser_invalid_mac">Invalid MAC address</string>
+    <string name="ble_advertiser_invalid_data">Invalid broadcast data</string>
+    <string name="ble_advertiser_invalid_rssi">Invalid signal strength</string>
+    <string name="ble_advertiser_invalid_data_format">Invalid broadcast data format</string>
+    <string name="ble_advertiser_failed_too_many">Too many BLE advertisers</string>
+    <string name="ble_advertiser_failed_already_started">Advertising already running</string>
+    <string name="ble_advertiser_failed_data_too_large">Broadcast data too large</string>
+    <string name="ble_advertiser_failed_internal">Internal error</string>
+    <string name="ble_advertiser_unknown_error">Unknown error: %1$d</string>
 </resources>
