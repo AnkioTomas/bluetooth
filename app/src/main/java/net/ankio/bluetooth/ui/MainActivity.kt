@@ -7,30 +7,21 @@ import android.content.Intent
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.LaunchedEffect
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ui.compose.HomeScreen
-import net.ankio.bluetooth.ui.compose.MainShell
 import net.ankio.bluetooth.ui.compose.ScanScreen
 import net.ankio.bluetooth.ui.compose.SettingsScreen
 import net.ankio.bluetooth.ui.compose.SimulateScreen
 import net.ankio.bluetooth.ui.navigation.AppTab
-import net.ankio.bluetooth.ui.navigation.navigateToTab
+import net.ankio.theme.compat.ThemeTopAppBarTitleAlignment
+import net.ankio.theme.layout.ThemeApp
 import net.ankio.theme.toast.ThemeToast
 
 class MainActivity : BluetoothBaseComposeActivity() {
 
     private var pendingScanReady: (() -> Unit)? = null
 
-    /**
-     * 处理系统蓝牙开启请求的返回结果：
-     * - 用户允许后提示可开始扫描
-     * - 仍未开启时给出提示
-     */
     private val enableBluetoothLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
@@ -43,9 +34,6 @@ class MainActivity : BluetoothBaseComposeActivity() {
             }
         }
 
-    /**
-     * 申请扫描所需权限，授权成功后继续执行挂起的扫描前动作。
-     */
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
             if (granted.values.all { it }) {
@@ -57,45 +45,58 @@ class MainActivity : BluetoothBaseComposeActivity() {
             pendingScanReady = null
         }
 
-    /**
-     * 组合应用主布局：
-     * - Activity 维护导航状态与 tab 选中态
-     * - MainShell 只负责壳布局与底栏
-     * - NavHost 作为 slot 注入壳中
-     */
     @Composable
     override fun Content() {
-        val navController = rememberNavController()
-        val backStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = backStackEntry?.destination?.route
-        val selectedTab = AppTab.entries.firstOrNull { it.route == currentRoute } ?: AppTab.Home
-
-        MainShell(
-            navController = navController,
-            selectedTab = selectedTab,
-            onTabSelected = { tab ->
-                if (tab == AppTab.Scan) {
-                    ensureScanReady { navController.navigateToTab(tab) }
-                } else {
-                    navController.navigateToTab(tab)
-                }
-            },
-        ) { contentModifier ->
-            NavHost(
-                navController = navController,
-                startDestination = AppTab.Home.route,
-                modifier = contentModifier,
+        ThemeApp(
+            start = AppTab.Home.route,
+            titleAlignment = ThemeTopAppBarTitleAlignment.Start,
+        ) {
+            screen(
+                route = AppTab.Home.route,
+                title = getString(R.string.nav_home),
+                tab = AppTab.Home.icon to getString(AppTab.Home.titleRes),
             ) {
-                composable(AppTab.Home.route) {
+                scrollColumn {
                     HomeScreen()
                 }
-                composable(AppTab.Simulate.route) {
+            }
+            screen(
+                route = AppTab.Simulate.route,
+                title = getString(R.string.nav_simulate),
+                tab = AppTab.Simulate.icon to getString(AppTab.Simulate.titleRes),
+            ) {
+                scrollColumn {
                     SimulateScreen()
                 }
-                composable(AppTab.Scan.route) {
-                    ScanScreen()
+            }
+            screen(
+                route = AppTab.Scan.route,
+                title = getString(R.string.nav_scan),
+                tab = AppTab.Scan.icon to getString(AppTab.Scan.titleRes),
+            ) {
+                LaunchedEffect(Unit) {
+                    ensureScanReady {}
                 }
-                composable(AppTab.Settings.route) {
+                ScanScreen(
+                    list = lazyList(),
+                    onNavigateToSimulate = {
+                        go(AppTab.Simulate.route) {
+                            popUpTo(AppTab.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+            screen(
+                route = AppTab.Settings.route,
+                title = getString(R.string.nav_settings),
+                tab = AppTab.Settings.icon to getString(AppTab.Settings.titleRes),
+                collapse = true,
+            ) {
+                scrollColumn {
                     SettingsScreen(
                         onRecreateForLocale = ::recreateForLocaleChange,
                         onThemeChanged = ::recreateForThemeChange,
@@ -105,15 +106,6 @@ class MainActivity : BluetoothBaseComposeActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-    }
-
-    /**
-     * 在进入扫描页前完成权限检查。
-     *
-     * @param onReady 当权限通过后执行的回调（通常用于导航到扫描页）
-     */
     private fun ensureScanReady(onReady: () -> Unit) {
         pendingScanReady = onReady
         val permissions = buildList {
@@ -126,12 +118,9 @@ class MainActivity : BluetoothBaseComposeActivity() {
         permissionLauncher.launch(permissions)
     }
 
-    /**
-     * 权限通过后确保蓝牙已开启，未开启则拉起系统蓝牙开关请求。
-     */
     private fun openBluetoothIfNeeded() {
         getSystemService(
-            BluetoothManager::class.java
+            BluetoothManager::class.java,
         ).adapter.let { adapter ->
             if (!adapter.isEnabled) {
                 enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))

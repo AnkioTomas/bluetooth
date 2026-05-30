@@ -25,7 +25,6 @@ import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.ui.compose.components.StatusBanner
 import net.ankio.bluetooth.ui.compose.components.StatusKind
-import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.viewmodel.HomeViewModel
 import net.ankio.theme.AnkioTheme
 import net.ankio.theme.settings.SettingCardPosition
@@ -45,16 +44,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    TabPageScaffold(title = stringResource(R.string.nav_home)) {
-        HomeScreenContent(
-            webdavMode = viewModel.webdavMode,
-            simulateMode = viewModel.simulateMode,
-            pluginStatusMessage = viewModel.pluginStatusMessage,
-            pluginStatusKind = viewModel.pluginStatusKind,
-            onWebdavModeChange = { viewModel.webdavMode = it },
-            onSimulateModeChange = { viewModel.simulateMode = it },
-        )
-    }
+    HomeScreenContent(
+        webdavMode = viewModel.webdavMode,
+        simulateMode = viewModel.simulateMode,
+        pluginStatusMessage = viewModel.pluginStatusMessage,
+        pluginStatusKind = viewModel.pluginStatusKind,
+        onWebdavModeChange = { viewModel.webdavMode = it },
+        onSimulateModeChange = { viewModel.simulateMode = it },
+    )
 }
 
 @Composable

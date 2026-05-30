@@ -23,6 +23,8 @@
     <string name="sync_from_webdav">从 WebDAV 拉取</string>
     <string name="sync_pull_success">已从 WebDAV 同步</string>
     <string name="webdav_not_configured">请先在设置中配置 WebDAV</string>
+    <string name="webdav_no_target">请先在模拟页设置目标 MAC 或厂商名称</string>
+    <string name="webdav_last_sync">上次同步：%1$s</string>
     <string name="device_selected_to_simulate">已应用设备，可在模拟页编辑。</string>
     <string name="status_mock_on">本机模拟已启用</string>
     <string name="status_mock_off">本机模拟未启用</string>
@@ -62,6 +64,7 @@
     <string name="always_off">总是关闭</string>
     <string name="always_on">总是开启</string>
     <string name="active_success">插件已激活</string>
+    <string name="active_restart">更新模块后请重启蓝牙栈。</string>
     <string name="submit">提交</string>
     <string name="please_input_webdav">请输入Webdav服务商地址：</string>
     <string name="please_input_username">请输入Webdav用户名：</string>

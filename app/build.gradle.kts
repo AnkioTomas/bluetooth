@@ -80,12 +80,11 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    implementation("androidx.navigation:navigation-compose:2.9.8")
 
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.14.0")
-    implementation("com.github.AnkioTomas:theme:1.1.2")
+    implementation("com.github.AnkioTomas:theme:1.1.5")
     implementation("com.github.AnkioTomas:webdav:1.0.4")
     implementation("androidx.browser:browser:1.10.0")
     testImplementation("junit:junit:4.13.2")
@@ -94,6 +93,7 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.1")
     implementation("com.guolindev.permissionx:permissionx:1.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("com.github.AnkioTomas.XposedLib:lib:1.0.1")

@@ -23,6 +23,8 @@
     <string name="sync_from_webdav">Pull from WebDAV</string>
     <string name="sync_pull_success">Synced from WebDAV</string>
     <string name="webdav_not_configured">Configure WebDAV in Settings first</string>
+    <string name="webdav_no_target">Set a target MAC or company name on the Simulate tab first</string>
+    <string name="webdav_last_sync">Last sync: %1$s</string>
     <string name="device_selected_to_simulate">Device applied. Open Simulate tab to edit.</string>
     <string name="status_mock_on">Local simulation enabled</string>
     <string name="status_mock_off">Local simulation disabled</string>
@@ -64,6 +66,7 @@
     <string name="always_off">Always off</string>
     <string name="always_on">Always on</string>
     <string name="active_success">Plugin activated</string>
+    <string name="active_restart">Restart the Bluetooth stack after updating the module.</string>
     <string name="submit">Submit</string>
     <string name="please_input_webdav">Please Input the Webdav server address:</string>
     <string name="please_input_username">Please input the username of Webdav:</string>

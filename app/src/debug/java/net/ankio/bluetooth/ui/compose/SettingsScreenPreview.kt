@@ -1,13 +1,9 @@
 package net.ankio.bluetooth.ui.compose
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import net.ankio.bluetooth.R
-import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.theme.PreviewAllScreen
 import net.ankio.theme.PreviewAllThemes
 import net.ankio.theme.ThemePreviewConfig
@@ -19,15 +15,10 @@ private fun SettingsScreenPreview(
     @PreviewParameter(ThemePreviewParameterProvider::class) config: ThemePreviewConfig,
 ) {
     PreviewAllThemes(config) {
-        TabPageScaffold(
-            title = stringResource(R.string.nav_settings),
-            scrollContent = false,
-        ) {
-            SettingsScreenContent(
-                languageTag = "SYSTEM",
-                onRecreateForLocale = { },
-                onThemeChanged = {},
-            )
-        }
+        SettingsScreenContent(
+            languageTag = "SYSTEM",
+            onRecreateForLocale = { },
+            onThemeChanged = {},
+        )
     }
 }

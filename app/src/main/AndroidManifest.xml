@@ -20,10 +20,12 @@
 
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <application
         android:name=".App"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -34,7 +36,8 @@
         <service
             android:name=".service.SendWebdavServer"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <service
             android:name=".service.BleAdvertiserService"
             android:enabled="true"
@@ -43,6 +46,7 @@
 
         <activity
             android:name=".ui.MainActivity"
+            android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustPan"
             android:exported="true">
             <intent-filter>

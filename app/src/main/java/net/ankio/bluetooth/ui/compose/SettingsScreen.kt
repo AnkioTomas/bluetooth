@@ -1,11 +1,8 @@
 package net.ankio.bluetooth.ui.compose
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Icon
@@ -15,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
-import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
 import net.ankio.bluetooth.viewmodel.SettingsViewModel
 import net.ankio.theme.AnkioTheme
 import net.ankio.theme.settings.SettingCardPosition
@@ -32,19 +28,14 @@ fun SettingsScreen(
     onThemeChanged: () -> Unit,
     viewModel: SettingsViewModel = viewModel(),
 ) {
-    TabPageScaffold(
-        title = stringResource(R.string.nav_settings),
-        scrollContent = false,
-    ) {
-        SettingsScreenContent(
-            languageTag = viewModel.languageTag,
-            onRecreateForLocale = {
-                viewModel.languageTag = it
-                onRecreateForLocale()
-            },
-            onThemeChanged = onThemeChanged,
-        )
-    }
+    SettingsScreenContent(
+        languageTag = viewModel.languageTag,
+        onRecreateForLocale = {
+            viewModel.languageTag = it
+            onRecreateForLocale()
+        },
+        onThemeChanged = onThemeChanged,
+    )
 }
 
 @Composable
@@ -65,42 +56,32 @@ fun SettingsScreenContent(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
+        WebDavSettingsScreen()
 
+        ThemeSectionHeader(stringResource(R.string.setting_general))
+        ThemeSettingDropdown(
+            items = languageOptions,
+            selectedIndex = languageIndex,
+            onSelectedIndexChange = { index ->
+                val tag = LangList.LOCALES.getOrElse(index.coerceIn(LangList.LOCALES.indices)) { "SYSTEM" }
+                onRecreateForLocale(tag)
+            },
+            title = stringResource(R.string.setting_lang),
+            startAction = {
+                Icon(
+                    imageVector = Icons.Filled.Language,
+                    contentDescription = null,
+                    tint = AnkioTheme.colorScheme.primary,
+                )
+            },
+            position = SettingCardPosition.Single,
+        )
 
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            WebDavSettingsScreen()
-
-            ThemeSectionHeader(stringResource(R.string.setting_general))
-            ThemeSettingDropdown(
-                items = languageOptions,
-                selectedIndex = languageIndex,
-                onSelectedIndexChange = { index ->
-                    val tag = LangList.LOCALES.getOrElse(index.coerceIn(LangList.LOCALES.indices)) { "SYSTEM" }
-                    onRecreateForLocale(tag)
-                },
-                title = stringResource(R.string.setting_lang),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Filled.Language,
-                        contentDescription = null,
-                        tint = AnkioTheme.colorScheme.primary,
-                    )
-                },
-                position = SettingCardPosition.Single,
-            )
-
-            UiSettingsScreen(
-                onThemeChanged = onThemeChanged,
-            )
-        }
-
-
+        UiSettingsScreen(
+            onThemeChanged = onThemeChanged,
+        )
     }
 }

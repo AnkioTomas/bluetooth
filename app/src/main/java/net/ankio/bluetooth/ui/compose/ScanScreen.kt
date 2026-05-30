@@ -1,16 +1,14 @@
 package net.ankio.bluetooth.ui.compose
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,18 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
+import net.ankio.bluetooth.ble.BleConstant.BleConstant
 import net.ankio.bluetooth.ble.BleDevice
 import net.ankio.bluetooth.ble.Rssi
-import net.ankio.bluetooth.ui.compose.components.TabPageScaffold
-import net.ankio.bluetooth.ui.navigation.AppTab
-import net.ankio.bluetooth.ui.navigation.navigateToTab
-import net.ankio.bluetooth.ble.BleConstant.BleConstant
 import net.ankio.bluetooth.utils.SpUtils
 import net.ankio.bluetooth.viewmodel.ScanViewModel
 import net.ankio.theme.AnkioTheme
@@ -53,106 +46,90 @@ import net.ankio.theme.compat.ThemeSlider
 import net.ankio.theme.compat.ThemeSwitch
 import net.ankio.theme.compat.ThemeText
 import net.ankio.theme.compat.ThemeTextField
+import net.ankio.theme.layout.ThemeLazyListScroll
 import net.ankio.theme.settings.ThemeSectionHeader
 import net.ankio.theme.sheet.ThemeBottomSheet
 import net.ankio.theme.toast.ThemeToast
 
-/**
- * 扫描页入口：连接 [ScanViewModel] 与 UI，并处理“选中设备后跳转模拟页”的一次性副作用。
- */
 @Composable
 fun ScanScreen(
+    list: ThemeLazyListScroll,
+    onNavigateToSimulate: () -> Unit,
     viewModel: ScanViewModel = viewModel(),
 ) {
-    val navHost = LocalBluetoothNavHost.current
     val deviceSelectedToast = stringResource(R.string.device_selected_to_simulate)
 
     LaunchedEffect(viewModel.openSimulate) {
         if (!viewModel.openSimulate) return@LaunchedEffect
-        navHost?.navigateToTab(AppTab.Simulate)
-        if (navHost != null) {
-            ThemeToast.show(deviceSelectedToast, ThemeToast.Style.Success)
-        }
+        onNavigateToSimulate()
+        ThemeToast.show(deviceSelectedToast, ThemeToast.Style.Success)
         viewModel.clearOpenSimulate()
     }
 
-    TabPageScaffold(
-        title = stringResource(R.string.nav_scan),
-        scrollContent = false,
-
-    ) {
-        ScanScreenContent(
-            devices = viewModel.devices,
-            isScanning = viewModel.isScanning,
-            onScanFabClick = viewModel::onScanFabClick,
-            onFilter = viewModel::openFilterDialog,
-            onDeviceClick = viewModel::selectDevice,
-        )
-    }
+    ScanScreenContent(
+        list = list,
+        devices = viewModel.devices,
+        isScanning = viewModel.isScanning,
+        onScanFabClick = viewModel::onScanFabClick,
+        onFilter = viewModel::openFilterDialog,
+        onDeviceClick = viewModel::selectDevice,
+    )
 
     if (viewModel.showFilterDialog) {
         ScanFilterSheet(onDismiss = viewModel::dismissFilterDialog)
     }
 }
 
-/**
- * 扫描页纯展示内容。
- *
- * @param devices 当前扫描结果列表
- * @param isScanning 是否处于扫描中
- * @param onScanFabClick 主按钮：未扫描时开始扫描，扫描中关闭蓝牙
- * @param onFilter 打开筛选面板
- * @param onDeviceClick 点击设备
- */
 @Composable
 fun ScanScreenContent(
+    list: ThemeLazyListScroll,
     devices: List<BleDevice>,
     isScanning: Boolean,
     onScanFabClick: () -> Unit,
     onFilter: () -> Unit,
     onDeviceClick: (BleDevice) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = list.state,
+            modifier = list.modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (isScanning) {
-                ThemeLinearProgressIndicator(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth())
+                item(key = "progress") {
+                    ThemeLinearProgressIndicator(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .fillMaxWidth(),
+                    )
+                }
             }
 
             if (devices.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(top = 24.dp, bottom = 88.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ThemeText(
-                        text = stringResource(R.string.ic_empty),
-                        style = AnkioTheme.textStyles.main,
-                        color = AnkioTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                ThemeSectionHeader(stringResource(R.string.scan_blue))
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    itemsIndexed(devices, key = { _, item -> item.address }) { index, device ->
-                        ScanDeviceCard(
-                            device = device,
-                            onClick = { onDeviceClick(device) },
+                item(key = "empty") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp)
+                            .padding(top = 24.dp, bottom = 88.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ThemeText(
+                            text = stringResource(R.string.ic_empty),
+                            style = AnkioTheme.textStyles.main,
+                            color = AnkioTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            } else {
+                item(key = "header") {
+                    ThemeSectionHeader(stringResource(R.string.scan_blue))
+                }
+                itemsIndexed(devices, key = { _, item -> item.address }) { _, device ->
+                    ScanDeviceCard(
+                        device = device,
+                        onClick = { onDeviceClick(device) },
+                    )
                 }
             }
         }
@@ -197,8 +174,7 @@ private fun ScanDeviceCard(
     onClick: () -> Unit,
 ) {
     ThemeCard(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     ) {
         Row(
@@ -247,7 +223,6 @@ private fun ScanDeviceCard(
                         text = device.address,
                         style = AnkioTheme.textStyles.footnote1,
                         color = AnkioTheme.colorScheme.onSurfaceVariant,
-
                     )
                 }
                 ThemeText(
@@ -260,11 +235,6 @@ private fun ScanDeviceCard(
     }
 }
 
-/**
- * 扫描筛选面板（Bottom Sheet）。
- *
- * 过滤项变更后立即写入本地配置，关闭面板只负责结束交互。
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScanFilterSheet(onDismiss: () -> Unit) {
@@ -277,12 +247,16 @@ private fun ScanFilterSheet(onDismiss: () -> Unit) {
     }
     var slider by remember(minRssi) { mutableFloatStateOf(Rssi.dbmToSlider(minRssi)) }
 
-    ThemeBottomSheet(onDismissRequest = onDismiss){
+    ThemeBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ThemeText(stringResource(R.string.filter), style = AnkioTheme.textStyles.title2,color = AnkioTheme.colorScheme.onSurfaceVariant,)
+            ThemeText(
+                stringResource(R.string.filter),
+                style = AnkioTheme.textStyles.title2,
+                color = AnkioTheme.colorScheme.onSurfaceVariant,
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
