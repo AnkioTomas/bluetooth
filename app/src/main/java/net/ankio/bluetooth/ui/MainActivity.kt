@@ -49,7 +49,7 @@ class MainActivity : BluetoothBaseComposeActivity() {
                     WebdavPushService.start(this, showToast = false)
                 }
                 if (SimulateMode.current() == SimulateMode.SenderNearBy) {
-                    BleAdvertiserService.start(this, showToast = false)
+                    BleAdvertiserService.start(this)
                 }
                 pendingScanReady?.invoke()
             } else {

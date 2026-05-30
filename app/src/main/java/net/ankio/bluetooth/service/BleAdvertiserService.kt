@@ -37,7 +37,6 @@ class BleAdvertiserService : Service() {
 
     private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
     private var advertiseCallback: AdvertiseCallback? = null
-    private var showToastOnError = false
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var timeoutJob: Job? = null
 
@@ -49,14 +48,10 @@ class BleAdvertiserService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_START -> {
-                showToastOnError = intent.getBooleanExtra(EXTRA_SHOW_TOAST, false)
-                stopBleAdvertise()
-                startBleAdvertise()
-            }
-            ACTION_STOP -> stopAndQuit()
-        }
+        // 直接获取参数并启动/重启广播，不再需要判断 Action
+        stopBleAdvertise()
+        startBleAdvertise()
+
         return START_NOT_STICKY
     }
 
@@ -155,9 +150,7 @@ class BleAdvertiserService : Service() {
     }
 
     private fun failMessage(message: String) {
-        if (showToastOnError) {
-            ThemeToast.show(message, ThemeToast.Style.Error)
-        }
+        ThemeToast.show(message, ThemeToast.Style.Error)
     }
 
     private fun scheduleTimeout() {
@@ -202,7 +195,7 @@ class BleAdvertiserService : Service() {
             NOTIFICATION_ID,
             notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
         )
     }
 
@@ -215,7 +208,6 @@ class BleAdvertiserService : Service() {
 
         return builder.build()
     }
-
 
     /**
      * 解析广播数据包
@@ -301,32 +293,22 @@ class BleAdvertiserService : Service() {
         private const val TAG = "BleAdvertiserService"
         private const val CHANNEL_ID = "ble_advertiser_channel"
         private const val NOTIFICATION_ID = 2001
-        private const val EXTRA_SHOW_TOAST = "show_toast"
         private const val ADVERTISE_TIMEOUT_MS = 10 * 60 * 1000L
-
-        const val ACTION_START = "net.ankio.bluetooth.ADVERTISE_START"
-        const val ACTION_STOP = "net.ankio.bluetooth.ADVERTISE_STOP"
 
         @Volatile
         var isRunning = false
             private set
 
-        fun start(context: Context, showToast: Boolean = false) {
+        fun start(context: Context) {
             ContextCompat.startForegroundService(
                 context,
-                Intent(context, BleAdvertiserService::class.java).apply {
-                    action = ACTION_START
-                    putExtra(EXTRA_SHOW_TOAST, showToast)
-                },
+                Intent(context, BleAdvertiserService::class.java),
             )
         }
 
         fun stop(context: Context) {
-            context.startService(
-                Intent(context, BleAdvertiserService::class.java).apply {
-                    action = ACTION_STOP
-                },
-            )
+            // 直接调用原生的 stopService，优雅结束 Service 生命周期
+            context.stopService(Intent(context, BleAdvertiserService::class.java))
         }
     }
 }

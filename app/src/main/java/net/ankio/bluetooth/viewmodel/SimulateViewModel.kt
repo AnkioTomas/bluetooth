@@ -32,7 +32,7 @@ class SimulateViewModel : ViewModel() {
         ) { value ->
             SpUtils.putString(key, value)
             if (SimulateMode.current() == SimulateMode.SenderNearBy) {
-                BleAdvertiserService.start(App.context, showToast = false)
+                BleAdvertiserService.start(App.context)
             }
         }
 }

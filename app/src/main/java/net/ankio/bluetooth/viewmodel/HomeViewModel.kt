@@ -34,7 +34,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         SpUtils.putString(PrefKeys.SIMULATE_MODE, value.name)
         when (value) {
             SimulateMode.SenderNearBy ->
-                BleAdvertiserService.start(getApplication(), showToast = true)
+                BleAdvertiserService.start(getApplication())
             else ->
                 BleAdvertiserService.stop(getApplication())
         }
@@ -54,7 +54,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 showToast = false,
             )
             if (SimulateMode.current() == SimulateMode.SenderNearBy) {
-                BleAdvertiserService.start(getApplication(), showToast = false)
+                BleAdvertiserService.start(getApplication())
             }
         }
     }
