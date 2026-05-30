@@ -11,14 +11,10 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
@@ -32,14 +28,21 @@ import net.ankio.theme.settings.ThemeSectionHeader
 import net.ankio.theme.settings.ThemeSettingDropdown
 
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
-
+fun HomeScreen(
+    onRequestBlePermissions: () -> Unit = {},
+    viewModel: HomeViewModel = viewModel(),
+) {
     HomeScreenContent(
         webdavMode = viewModel.webdavMode,
         simulateMode = viewModel.simulateMode,
         pluginStatusMessage = viewModel.pluginStatusMessage,
         pluginStatusKind = viewModel.pluginStatusKind,
-        onWebdavModeChange = { viewModel.webdavMode = it },
+        onWebdavModeChange = {
+            if (it == WebdavMode.Sender2Webdav) {
+                onRequestBlePermissions()
+            }
+            viewModel.webdavMode = it
+        },
         onSimulateModeChange = { viewModel.simulateMode = it },
     )
 }

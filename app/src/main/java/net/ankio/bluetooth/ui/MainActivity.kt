@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import net.ankio.bluetooth.R
+import net.ankio.bluetooth.ble.BlePermissions
+import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.service.WebdavPushService
 import net.ankio.bluetooth.ui.compose.HomeScreen
 import net.ankio.bluetooth.ui.compose.ScanScreen
 import net.ankio.bluetooth.ui.compose.SettingsScreen
@@ -40,6 +43,9 @@ class MainActivity : BluetoothBaseComposeActivity() {
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
             if (granted.values.all { it }) {
                 openBluetoothIfNeeded()
+                if (WebdavMode.current() == WebdavMode.Sender2Webdav) {
+                    WebdavPushService.start(this, showToast = false)
+                }
                 pendingScanReady?.invoke()
             } else {
                 ThemeToast.show(getString(R.string.no_permission), ThemeToast.Style.Error)
@@ -61,6 +67,11 @@ class MainActivity : BluetoothBaseComposeActivity() {
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+            if (WebdavMode.current() == WebdavMode.Sender2Webdav &&
+                !BlePermissions.hasScan(this@MainActivity)
+            ) {
+                permissionLauncher.launch(BlePermissions.required())
+            }
         }
 
         ThemeApp(
@@ -73,7 +84,7 @@ class MainActivity : BluetoothBaseComposeActivity() {
                 tab = AppTab.Home.icon to getString(AppTab.Home.titleRes),
             ) {
                 scrollColumn {
-                    HomeScreen()
+                    HomeScreen(onRequestBlePermissions = ::requestBlePermissions)
                 }
             }
             screen(
@@ -122,16 +133,14 @@ class MainActivity : BluetoothBaseComposeActivity() {
         }
     }
 
+    private fun requestBlePermissions() {
+        if (BlePermissions.hasScan(this)) return
+        permissionLauncher.launch(BlePermissions.required())
+    }
+
     private fun ensureScanReady(onReady: () -> Unit) {
         pendingScanReady = onReady
-        val permissions = buildList {
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                add(Manifest.permission.BLUETOOTH_SCAN)
-                add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
-        }.toTypedArray()
-        permissionLauncher.launch(permissions)
+        permissionLauncher.launch(BlePermissions.required())
     }
 
     private fun openBluetoothIfNeeded() {

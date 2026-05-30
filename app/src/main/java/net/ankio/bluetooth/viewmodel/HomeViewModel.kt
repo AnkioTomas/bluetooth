@@ -20,15 +20,8 @@ import net.ankio.bluetooth.webdav.WebdavServiceManager
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    init {
-
-        viewModelScope.launch {
-            WebdavServiceManager.applyMode(getApplication(), WebdavMode.current())
-        }
-    }
-
     var webdavMode: WebdavMode by persistedState(
-        initialValue = WebdavMode.current()
+        initialValue = WebdavMode.current(),
     ) { value ->
         SpUtils.putString(PrefKeys.WEBDAV_MODE, value.name)
         WebdavServiceManager.applyMode(getApplication(), value)
@@ -49,7 +42,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     init {
         refreshPluginStatus()
         viewModelScope.launch {
-            WebdavServiceManager.applyMode(getApplication(), WebdavMode.current(), showToast = false)
+            WebdavServiceManager.applyMode(
+                getApplication(),
+                WebdavMode.current(),
+                showToast = false,
+            )
         }
     }
 
