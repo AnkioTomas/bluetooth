@@ -16,12 +16,12 @@ class WebdavUtils(private val context: Context) {
     suspend fun sendToServer(bluetoothData: BluetoothData) {
         Log.i(TAG, "Send Bluetooth to Webdav")
         ensureBluetoothDir()
-        SpUtils.putString(PrefKeys.WEBDAV_LAST, now())
         val json = Gson().toJson(bluetoothData)
         if (client.exists(BLUETOOTH_FILE)) {
             client.delete(BLUETOOTH_FILE)
         }
         client.writeBytes(BLUETOOTH_FILE, json.toByteArray(), "application/json")
+        SpUtils.putString(PrefKeys.WEBDAV_LAST, now())
     }
 
     suspend fun getFromServer(): BluetoothData? {

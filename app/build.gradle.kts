@@ -93,7 +93,6 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    implementation("androidx.work:work-runtime-ktx:2.11.1")
     implementation("com.guolindev.permissionx:permissionx:1.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("com.github.AnkioTomas.XposedLib:lib:1.0.1")
