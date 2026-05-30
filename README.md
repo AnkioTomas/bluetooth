@@ -1,79 +1,129 @@
 <p align="center">
-  <img src="https://socialify.git.ci/dreamncn/bluetooth/image?description=1&font=Source%20Code%20Pro&forks=1&issues=1&logo=https%3A%2F%2Fpic.dreamn.cn%2FuPic%2F2023_04_22_23_52_24_1682178744_1682178744595_CRaKET.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto" alt="bluetooth" width="640" height="320" /></p>
+  <img src="https://socialify.git.ci/AnkioTomas/bluetooth/image?description=1&font=Source%20Code%20Pro&forks=1&issues=1&logo=https%3A%2F%2Fpic.dreamn.cn%2FuPic%2F2023_04_22_23_52_24_1682178744_1682178744595_CRaKET.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto" alt="BluetoothDebug" width="640" height="320" />
+</p>
 
- *Read this in other languages: English、[简体中文](README.zh_CN.md).*
+*Read this in other languages: English, [简体中文](README.zh_CN.md).*
 
 ## Introduction
-This is a tool for debugging low-power Bluetooth, which has functions such as Bluetooth discovery, vendor identification, data simulation, and data synchronization.
 
-## Compatibility Warning
+**BluetoothDebug** is an Android tool for debugging Bluetooth Low Energy (BLE). It helps you discover nearby devices, inspect manufacturer data and advertising payloads, simulate BLE behavior, and sync configuration over WebDAV.
 
-If your Lsposed supports an API level **lower than 93**, you will not be able to use this plugin. You can check the currently supported API versions on the `API Version` section of the Lsposed homepage.
+## Important notice
 
+> **Do not use this project for attendance or check-in purposes.**
+>
+> Some check-in apps silently upload location data in the background. If you get caught because of that, it has **nothing to do with this project**.
+
+## Features
+
+| Area | What it does |
+| --- | --- |
+| **Scan** | Live BLE scan with company-name lookup, RSSI display, and filters (company keyword, empty name, signal strength) |
+| **Simulate → Local device** | Injects fake scan results into the system Bluetooth stack via LSPosed (`com.android.bluetooth` / `GattService`) |
+| **Simulate → External broadcast** | Runs a foreground BLE advertiser using MAC, advertising data, and RSSI from the Simulate tab |
+| **WebDAV → Send** | Periodically scans with the **same filters as the Scan tab**, then uploads the first matching device |
+| **WebDAV → Sync** | Pulls remote Bluetooth data into local preferences on a schedule |
+| **Settings** | WebDAV credentials, theme, language, optional Hook debug logs |
+
+## Requirements
+
+- Android 12+ (API 30+)
+- Bluetooth LE hardware
+- **[LSPosed](https://github.com/LSPosed/LSPosed)** with **API 93+** (required for **Local device** simulation)
+- Location / Bluetooth runtime permissions (requested by the app when needed)
+
+## LSPosed setup
+
+1. Install the latest APK from [Releases](https://github.com/AnkioTomas/bluetooth/releases).
+2. Enable the module in LSPosed.
+3. Set scope to:
+   - `com.android.bluetooth` (system Bluetooth process — required for local simulation)
+   - `net.ankio.bluetooth` (this app)
+4. Restart the Bluetooth stack (toggle Bluetooth or reboot) after installing or updating the module.
+
+> **External broadcast** and **WebDAV** modes do not require the Xposed hook. **Local device** simulation does.
 
 ## Usage
 
-### Mock bluetooth
+### 1. Capture a device from scan
 
-1. Download the latest version from [Release](https://github.com/AnkioTomas/bluetooth/releases) and install it on the phone.
-2. Activate and check `com.android.bluetooth` in Lsposed.
-3. Search for Bluetooth on the homepage and select the Bluetooth device you want to emulate.
-4. Return to the homepage and click "simulate" to start.
-5. Enjoy it :)
+1. Open the **Bluetooth** tab and grant scan permissions.
+2. Optionally open **Filter** to set company keyword, RSSI threshold, or hide unnamed devices.
+3. Tap a scan result — MAC, advertising data, and RSSI are saved to the **Simulate** tab.
 
-### Sync by Webdav
+### 2. Local device simulation (Xposed)
 
-#### As Sender
+1. On **Simulate**, review or edit MAC, broadcast data, and RSSI.
+2. On **Home**, set **Simulation** to **Local device**.
+3. Other apps that scan BLE on this phone will see the configured device.
 
-1. Enter your webdav account information.
-2. Choose either Mac address or company name.
-3. Click to enable synchronization and serve as the sender.
+Enable **Hook debug logs** in **Settings** if you need Xposed-side troubleshooting logs.
 
-#### As Receiver
+### 3. External broadcast (no Xposed)
 
-1. Enter your webdav account information.
-2. Click to enable synchronization
+1. Configure MAC, data, and RSSI on **Simulate**.
+2. On **Home**, set **Simulation** to **External broadcast**.
+3. The app starts a foreground BLE advertiser. Nearby phones can discover the simulated device.
 
-##  Contribute to the project
+Advertising stops automatically after 10 minutes, or when you turn the mode off.
 
-Contributions make the open-source community an excellent place for learning, motivation, and creation. Any contribution you make is **greatly appreciated**.
+### 4. WebDAV sync
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b dreamncn/bluetooth`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin dreamncn/bluetooth`)
+Configure WebDAV under **Settings** first.
+
+#### Send to WebDAV (sender)
+
+1. Set scan filters on the **Bluetooth** tab (same rules used for periodic upload).
+2. On **Home**, set **WebDAV** to **Send to WebDAV**.
+3. A foreground service scans every 5 minutes and uploads the first device that matches your filters.
+
+#### Sync from WebDAV (receiver)
+
+1. On **Home**, set **WebDAV** to **Sync from WebDAV**.
+2. A foreground service pulls remote data into local preferences every 5 minutes.
+
+## Build
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+Release builds are signed separately; install the APK from GitHub Releases for normal use.
+
+## Contribute
+
+Contributions are welcome.
+
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/my-change`)
+3. Commit your changes (`git commit -m 'feat: describe your change'`)
+4. Push to the branch (`git push origin feature/my-change`)
 5. Open a Pull Request
 
-> A small request about Commit: 
+Commit message format:
 
 ```
-The commit format should be: [Type]: [Change description]
+[Type]: [Description]
 
-feat: New feature
-fix: Fix issue
-docs: Update documentation
-style: Modify code formatting without affecting code logic
-refactor: Refactor code, theoretically without affecting existing functionality
-perf: Improve performance
-test: Add/modify test cases
-chore: Modify tooling-related files (including but not limited to documentation, code generation, etc.)
-deps: Upgrade dependencies
+feat:     New feature
+fix:      Bug fix
+docs:     Documentation
+style:    Formatting only
+refactor: Code refactor
+perf:     Performance
+test:     Tests
+chore:    Tooling / misc
+deps:     Dependency updates
 ```
 
 ## Screenshots
 
-| ![image-20230423003709560](https://pic.dreamn.cn/uPic/2023_04_23_00_37_12_1682181432_1682181432157_FujGlZ.png) | ![image-20230423003741264](https://pic.dreamn.cn/uPic/2023_04_23_00_37_44_1682181464_1682181464412_pHiGh0.png) | ![image-20230423003806966](https://pic.dreamn.cn/uPic/2023_04_23_00_38_09_1682181489_1682181489088_Ek7N08.png) |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![image-20230423003841647](https://pic.dreamn.cn/uPic/2023_04_23_00_38_51_1682181531_1682181531325_4D4a83.png) | ![image-20230423003912924](https://pic.dreamn.cn/uPic/2023_04_23_00_39_14_1682181554_1682181554862_V0wqQf.png) | ![image-20230423003938267](https://pic.dreamn.cn/uPic/2023_04_23_00_39_40_1682181580_1682181580266_ruC8Tc.png) |
+| | | |
+| --- | --- | --- |
+| ![Scan](images/img_2.png) | ![Simulate](images/img_1.png) | ![Home](images/img.png) |
+| ![Settings](images/img_3.png) | ![Filter](images/img_4.png) | |
+| ![Simulation mode](images/img_5.png) | ![WebDAV](images/img_6.png) | |
 
-## Sponsorship support
+## License
 
-|                                                Wechat                                                |                                                Alipay                                                |
-|:----------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------:|
-| ![Wechat QRcode](https://pic.dreamn.cn/uPic/2023_04_23_00_41_49_1682181709_1682181709722_KGWAI6.jpg) | ![Alipay QRcode](https://pic.dreamn.cn/uPic/2023_04_23_00_42_02_1682181722_1682181722820_82xpxH.jpg) |
-
-
-
-## Agreement
-
-GPL 3.0
+GPL-3.0
