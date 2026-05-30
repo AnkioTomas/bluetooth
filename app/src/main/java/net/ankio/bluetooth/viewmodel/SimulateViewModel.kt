@@ -1,10 +1,13 @@
 package net.ankio.bluetooth.viewmodel
 
 import androidx.lifecycle.ViewModel
+import net.ankio.bluetooth.App
+import net.ankio.bluetooth.model.SimulateMode
+import net.ankio.bluetooth.service.BleAdvertiserService
 import net.ankio.bluetooth.utils.PersistedStateDelegate
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
-import net.ankio.bluetooth.utils.persistedPrefState
+import net.ankio.bluetooth.utils.persistedState
 
 class SimulateViewModel : ViewModel() {
 
@@ -16,7 +19,6 @@ class SimulateViewModel : ViewModel() {
     var prefData: String by dataState
     var prefRssi: String by rssiState
 
-
     fun reloadFromPrefs() {
         macState.reload(SpUtils.getString(PrefKeys.PREF_MAC, ""))
         dataState.reload(SpUtils.getString(PrefKeys.PREF_DATA, ""))
@@ -24,5 +26,13 @@ class SimulateViewModel : ViewModel() {
     }
 
     private fun prefState(key: String, default: String): PersistedStateDelegate<String> =
-        persistedPrefState(key, default)
+        persistedState(
+            initialValue = SpUtils.getString(key, default),
+            debounceMs = 500,
+        ) { value ->
+            SpUtils.putString(key, value)
+            if (SimulateMode.current() == SimulateMode.SenderNearBy) {
+                BleAdvertiserService.start(App.context, showToast = false)
+            }
+        }
 }

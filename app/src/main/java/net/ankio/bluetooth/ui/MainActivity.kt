@@ -12,7 +12,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ble.BlePermissions
+import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
+import net.ankio.bluetooth.service.BleAdvertiserService
 import net.ankio.bluetooth.service.WebdavPushService
 import net.ankio.bluetooth.ui.compose.HomeScreen
 import net.ankio.bluetooth.ui.compose.ScanScreen
@@ -45,6 +47,9 @@ class MainActivity : BluetoothBaseComposeActivity() {
                 openBluetoothIfNeeded()
                 if (WebdavMode.current() == WebdavMode.Sender2Webdav) {
                     WebdavPushService.start(this, showToast = false)
+                }
+                if (SimulateMode.current() == SimulateMode.SenderNearBy) {
+                    BleAdvertiserService.start(this, showToast = false)
                 }
                 pendingScanReady?.invoke()
             } else {
@@ -84,7 +89,10 @@ class MainActivity : BluetoothBaseComposeActivity() {
                 tab = AppTab.Home.icon to getString(AppTab.Home.titleRes),
             ) {
                 scrollColumn {
-                    HomeScreen(onRequestBlePermissions = ::requestBlePermissions)
+                    HomeScreen(
+                        onRequestBlePermissions = ::requestBlePermissions,
+                        onRequestBleAdvertisePermissions = ::requestBleAdvertisePermissions,
+                    )
                 }
             }
             screen(
@@ -136,6 +144,11 @@ class MainActivity : BluetoothBaseComposeActivity() {
     private fun requestBlePermissions() {
         if (BlePermissions.hasScan(this)) return
         permissionLauncher.launch(BlePermissions.required())
+    }
+
+    private fun requestBleAdvertisePermissions() {
+        if (BlePermissions.hasAdvertise(this)) return
+        permissionLauncher.launch(BlePermissions.requiredForAdvertise())
     }
 
     private fun ensureScanReady(onReady: () -> Unit) {

@@ -30,6 +30,7 @@ import net.ankio.theme.settings.ThemeSettingDropdown
 @Composable
 fun HomeScreen(
     onRequestBlePermissions: () -> Unit = {},
+    onRequestBleAdvertisePermissions: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     HomeScreenContent(
@@ -43,7 +44,12 @@ fun HomeScreen(
             }
             viewModel.webdavMode = it
         },
-        onSimulateModeChange = { viewModel.simulateMode = it },
+        onSimulateModeChange = {
+            if (it == SimulateMode.SenderNearBy) {
+                onRequestBleAdvertisePermissions()
+            }
+            viewModel.simulateMode = it
+        },
     )
 }
 

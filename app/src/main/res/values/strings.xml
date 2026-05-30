@@ -38,7 +38,7 @@
     <string name="home_simulate_mode">Simulation</string>
     <string name="webdav_mode_sender2webdav">Send to WebDAV</string>
     <string name="webdav_mode_sync">Sync from WebDAV</string>
-    <string name="simulate_mode_nearby">Nearby sender</string>
+    <string name="simulate_mode_nearby">External broadcast</string>
     <string name="simulate_mode_self">Local device</string>
     <string name="mode_none">Off</string>
     <string name="setting_webdav">WebDAV</string>

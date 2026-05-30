@@ -12,6 +12,7 @@ import net.ankio.bluetooth.R
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.model.WebdavMode
 import net.ankio.bluetooth.ui.compose.components.StatusKind
+import net.ankio.bluetooth.service.BleAdvertiserService
 import net.ankio.bluetooth.utils.HookUtils
 import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.bluetooth.utils.SpUtils
@@ -31,7 +32,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = SimulateMode.current(),
     ) { value ->
         SpUtils.putString(PrefKeys.SIMULATE_MODE, value.name)
-        // TODO 这里需要额外的操作（启动外围模拟）
+        when (value) {
+            SimulateMode.SenderNearBy ->
+                BleAdvertiserService.start(getApplication(), showToast = true)
+            else ->
+                BleAdvertiserService.stop(getApplication())
+        }
     }
 
     var pluginStatusMessage by mutableStateOf("")
@@ -47,6 +53,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 WebdavMode.current(),
                 showToast = false,
             )
+            if (SimulateMode.current() == SimulateMode.SenderNearBy) {
+                BleAdvertiserService.start(getApplication(), showToast = false)
+            }
         }
     }
 
