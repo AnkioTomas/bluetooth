@@ -27,19 +27,22 @@ class PersistedStateDelegate<T>(
     operator fun getValue(thisRef: Any?, property: Any?): T = state
 
     operator fun setValue(thisRef: Any?, property: Any?, value: T) {
-        // 1. UI 状态必须瞬间更新，绝不延迟，保证画面不卡顿
+        update(value, persist = true)
+    }
+
+    /** 外部写入 pref 后刷新 UI，不再回写 pref。 */
+    fun reload(value: T) {
+        update(value, persist = false)
+    }
+
+    private fun update(value: T, persist: Boolean) {
         state = value
-
-        // 2. 取消上一次还没执行的写入任务（如果存在的话）
         debounceJob?.cancel()
-
-        // 3. 开启一个新的写入任务
+        if (!persist) return
         debounceJob = scope.launch(Dispatchers.IO) {
-            // 如果用户设置了防抖时间，就先等一会儿
             if (debounceMs > 0) {
                 delay(debounceMs)
             }
-            // 时间到了，用户没再输入，执行真正的保存操作
             onSave(value)
         }
     }
