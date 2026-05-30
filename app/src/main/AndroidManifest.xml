@@ -40,7 +40,7 @@
             android:name=".service.BleAdvertiserService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="connectedDevice|location" />
 
         <service
             android:name=".service.WebdavPushService"
