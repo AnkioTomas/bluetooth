@@ -5,9 +5,11 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.os.Build
+import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.core.content.ContextCompat
 import net.ankio.bluetooth.R
 import net.ankio.bluetooth.ui.compose.HomeScreen
 import net.ankio.bluetooth.ui.compose.ScanScreen
@@ -45,8 +47,22 @@ class MainActivity : BluetoothBaseComposeActivity() {
             pendingScanReady = null
         }
 
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* optional */ }
+
     @Composable
     override fun Content() {
+        LaunchedEffect(Unit) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         ThemeApp(
             start = AppTab.Home.route,
             titleAlignment = ThemeTopAppBarTitleAlignment.Start,
