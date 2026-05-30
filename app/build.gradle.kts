@@ -25,7 +25,8 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -82,18 +83,15 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 
     implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.14.0")
     implementation("com.github.AnkioTomas:theme:1.1.5")
     implementation("com.github.AnkioTomas:webdav:1.0.4")
-    implementation("androidx.browser:browser:1.10.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    implementation("com.guolindev.permissionx:permissionx:1.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("com.github.AnkioTomas.XposedLib:lib:1.0.1")
     compileOnly("de.robv.android.xposed:api:82")
