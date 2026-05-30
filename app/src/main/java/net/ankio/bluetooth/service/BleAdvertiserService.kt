@@ -202,74 +202,84 @@ class BleAdvertiserService : Service() {
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
 
-        parseAdvertisingData(builder, data)
+        val elements = parseRawAdvertisingData(data)
+
+        // 1. 标志位 (Flags) 处理
+        // 注意：Android 系统通常会自动添加 Flags。这里我们仅记录，暂不尝试强制修改，
+        // 因为强制修改可能需要反射调用隐藏 API 或在某些 ROM 上无效。
+        elements.find { it.type == 0x01 }?.let { flagsElement ->
+            Log.d(TAG, "原始数据中的标志位 (Flags): ${ByteUtils.byteArrayToHexString(flagsElement.data)}")
+        }
+
+        // 2. 优先添加服务 UUID (Type 0x03)，以保持与原始设备一致的物理顺序
+        elements.filter { it.type == 0x03 }.forEach { element ->
+            val fieldData = element.data
+            if (fieldData.size >= 2 && fieldData.size % 2 == 0) {
+                for (i in fieldData.indices step 2) {
+                    val uuidBytes = fieldData.sliceArray(i until i + 2)
+                    val uuid = UUID.fromString(
+                        String.format(
+                            "%04X-0000-1000-8000-00805F9B34FB",
+                            (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF)
+                        )
+                    )
+                    builder.addServiceUuid(ParcelUuid(uuid))
+                    Log.d(TAG, "添加 16 位服务 UUID: 0x${String.format("%04X", (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF))}")
+                }
+            }
+        }
+
+        // 3. 添加厂商自定义数据 (Type 0xFF)
+        elements.filter { it.type == 0xFF }.forEach { element ->
+            val fieldData = element.data
+            if (fieldData.size >= 2) {
+                val companyId = ((fieldData[1].toInt() and 0xFF) shl 8) or (fieldData[0].toInt() and 0xFF)
+                val manufacturerData = if (fieldData.size > 2) fieldData.sliceArray(2 until fieldData.size) else byteArrayOf()
+
+                builder.addManufacturerData(companyId, manufacturerData)
+                Log.d(TAG, "添加厂商数据: ID=0x${String.format("%04X", companyId)}, 数据长度=${manufacturerData.size}")
+            }
+        }
 
         return builder.build()
     }
 
     /**
-     * 解析广播数据包
+     * 将原始字节数组解析为 AD 元素列表
      */
-    private fun parseAdvertisingData(builder: AdvertiseData.Builder, data: ByteArray) {
+    private fun parseRawAdvertisingData(data: ByteArray): List<AdElement> {
+        val elements = mutableListOf<AdElement>()
         var index = 0
-
         while (index < data.size) {
             val length = (data[index++].toInt() and 0xFF)
             if (length == 0 || index + length > data.size) break
 
             val type = (data[index].toInt() and 0xFF)
-            val fieldData = if (index + 1 < data.size && length > 1) {
+            val fieldData = if (length > 1) {
                 data.copyOfRange(index + 1, index + length)
             } else {
                 byteArrayOf()
             }
-
-            when (type) {
-                0x01 -> {
-                    // 标志位
-                    Log.d(TAG, "标志位: ${fieldData.joinToString("") { String.format("%02X", it) }}")
-                }
-                0x03 -> {
-                    // 16位服务UUID完整列表
-                    if (fieldData.size >= 2 && fieldData.size % 2 == 0) {
-                        val serviceUuids = mutableListOf<ParcelUuid>()
-                        for (i in fieldData.indices step 2) {
-                            val uuidBytes = fieldData.sliceArray(i until i + 2)
-                            val uuid = UUID.fromString(String.format("%04X-0000-1000-8000-00805F9B34FB",
-                                (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF)))
-                            serviceUuids.add(ParcelUuid(uuid))
-                            Log.d(TAG, "添加16位服务UUID: 0x${String.format("%04X",
-                                (uuidBytes[1].toInt() and 0xFF shl 8) or (uuidBytes[0].toInt() and 0xFF))}")
-                        }
-                        // 使用正确的方法添加服务UUID
-                        for (serviceUuid in serviceUuids) {
-                            builder.addServiceUuid(serviceUuid)
-                        }
-                    }
-                }
-                0xFF -> {
-                    // 厂商特定数据
-                    if (fieldData.size >= 2) {
-                        val companyIdLow = (fieldData[0].toInt() and 0xFF)
-                        val companyIdHigh = (fieldData[1].toInt() and 0xFF)
-                        val companyId = (companyIdHigh shl 8) or companyIdLow
-
-                        val manufacturerData = if (fieldData.size > 2) {
-                            fieldData.sliceArray(2 until fieldData.size)
-                        } else {
-                            byteArrayOf()
-                        }
-
-                        builder.addManufacturerData(companyId, manufacturerData)
-                        Log.d(TAG, "添加厂商数据: ID=0x${String.format("%04X", companyId)}, 数据长度=${manufacturerData.size}")
-                        Log.d(TAG, "厂商数据内容: ${manufacturerData.joinToString("") { String.format("%02X", it) }}")
-                    }
-                }
-                else -> {
-                    Log.d(TAG, "未知数据类型: 0x${String.format("%02X", type)}, 长度: ${fieldData.size}")
-                }
-            }
+            elements.add(AdElement(type, fieldData))
             index += length
+        }
+        return elements
+    }
+
+    private data class AdElement(val type: Int, val data: ByteArray) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as AdElement
+            if (type != other.type) return false
+            if (!data.contentEquals(other.data)) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = type
+            result = 31 * result + data.contentHashCode()
+            return result
         }
     }
 
