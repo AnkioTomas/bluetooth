@@ -19,7 +19,7 @@
 | Area | What it does |
 | --- | --- |
 | **Scan** | Live BLE scan with company-name lookup, RSSI display, and filters (company keyword, empty name, signal strength) |
-| **Simulate → Local device** | Injects fake scan results into the system Bluetooth stack via LSPosed (`com.android.bluetooth` / `GattService`) |
+| **Simulate → Local device** | Injects fake scan results into the system Bluetooth stack via LSPosed (`com.android.bluetooth`); the injection point varies by OS version, see [OS version differences](#os-version-differences) |
 | **Simulate → External broadcast** | Runs a foreground BLE advertiser using MAC, advertising data, and RSSI from the Simulate tab |
 | **WebDAV → Send** | Periodically scans with the **same filters as the Scan tab**, then uploads the first matching device |
 | **WebDAV → Sync** | Pulls remote Bluetooth data into local preferences on a schedule |
@@ -58,6 +58,29 @@
 3. Other apps that scan BLE on this phone will see the configured device.
 
 Enable **Hook debug logs** in **Settings** if you need Xposed-side troubleshooting logs.
+
+#### OS version differences
+
+Starting with Android 15, AOSP has been gradually moving BLE scan handling out of `GattService` into `le_scan.ScanController`, so the injection point differs on every release:
+
+| OS | Hook entry | Actual injection target | Posting thread |
+| --- | --- | --- | --- |
+| Android 14 | `GattService.start` / `stop` | `GattService` itself | Main thread |
+| Android 15 | `GattService.start` / `stop` | `getTransitionalScanHelper()` | Main thread |
+| Android 16 | `GattService` constructors / `cleanup` | `getScanController()` | Main thread |
+| Android 17 | `ScanController` constructors / `cleanup` | `ScanController` itself | `ScanController.mHandler` |
+
+The implementation does not branch on OS version. It hooks both `GattService` and `ScanController`, then probes `getScanController` → `getTransitionalScanHelper` → the entry object itself at runtime and takes the first object that actually declares `onScanResult`. The repeating task is attached to that resolved target, so an object discovered through two entries is never injected twice.
+
+Key differences across versions:
+
+- **`onScanResultInternal` is always the injection method.** On Android 17, `ScanController.onScanResult` starts with `enforceScanThread()` and throws `IllegalStateException` when called from another thread; `onScanResultInternal` has no such assertion. AOSP's own test mode also fakes beacons through `onScanResultInternal`.
+- **Android 17 must post on the scan thread.** `ScanController` owns a dedicated `BluetoothScanManager` thread, so its `mHandler` field is used for posting. Android 14–16 have neither that field nor the thread assertion and fall back to the main thread.
+- **Method probing walks the class hierarchy.** `GattService extends ProfileService`, and `start()` / `stop()` are declared in the parent on Android 14/15. Looking only at `declaredMethods` misses them and produces a false "unsupported device" verdict.
+- **Constructor signatures are never hardcoded.** The `GattService` constructor is `(Context)` on Android 15, `(AdapterService)` on Android 16, and a five-argument version on Android 17, so all constructors are hooked instead.
+- **Android 15's `ScanController` is a thin shell** that holds no `onScanResult` of its own and must be drilled through via `getTransitionalScanHelper()`. Class presence alone therefore cannot be used to detect the OS version.
+
+`Unsupported device` in the log means neither entry class was found. `No scan target under ...` is expected — it simply means that entry does not carry scan logic on the current OS, and the other entry will take over.
 
 ### 3. External broadcast (no Xposed)
 
