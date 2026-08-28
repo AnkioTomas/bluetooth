@@ -19,7 +19,7 @@
 | 模块 | 说明 |
 | --- | --- |
 | **蓝牙（扫描）** | 实时扫描，显示厂商、RSSI、广播数据；支持公司关键词、空名称、信号强度过滤 |
-| **模拟 → 本机模拟** | 通过 LSPosed Hook 系统 `com.android.bluetooth`（`GattService`），向本机应用注入伪造扫描结果 |
+| **模拟 → 本机模拟** | 通过 LSPosed Hook 系统 `com.android.bluetooth`，向本机应用注入伪造扫描结果（注入点随系统版本变化，见[系统版本适配](#系统版本适配)） |
 | **模拟 → 对外发送** | 前台 BLE 广播服务，按模拟页配置的 MAC、广播数据、RSSI 对外广播 |
 | **WebDAV → 发送到 WebDAV** | 每 5 分钟按**扫描页相同过滤条件**扫描，上传首个匹配设备 |
 | **WebDAV → 从 WebDAV 同步** | 定时从 WebDAV 拉取配置写入本地 |
@@ -58,6 +58,29 @@
 3. 本机其他 BLE 扫描应用将看到配置的设备。
 
 排查 Hook 问题时，可在 **设置** 中开启 **Hook 调试日志**。
+
+#### 系统版本适配
+
+AOSP 从 Android 15 开始把 BLE 扫描逻辑逐步从 `GattService` 拆到 `le_scan.ScanController`，每个版本的注入点都不一样：
+
+| 系统 | 挂钩入口 | 实际注入对象 | 投递线程 |
+| --- | --- | --- | --- |
+| Android 14 | `GattService.start` / `stop` | `GattService` 自身 | 主线程 |
+| Android 15 | `GattService.start` / `stop` | `getTransitionalScanHelper()` | 主线程 |
+| Android 16 | `GattService` 构造器 / `cleanup` | `getScanController()` | 主线程 |
+| Android 17 | `ScanController` 构造器 / `cleanup` | `ScanController` 自身 | `ScanController.mHandler` |
+
+实现上不按系统版本号分支，而是同时挂 `GattService` 与 `ScanController` 两个入口，运行时逐层探测 `getScanController` → `getTransitionalScanHelper` → 入口对象自身，取第一个真正声明了 `onScanResult` 的对象作为注入目标；定时器挂在该目标对象上，因此同一对象被两个入口先后发现时不会重复注入。
+
+几个版本差异要点：
+
+- **注入方法固定用 `onScanResultInternal`**。Android 17 的 `ScanController.onScanResult` 开头有 `enforceScanThread()`，从其他线程调用会抛 `IllegalStateException`；`onScanResultInternal` 没有该断言。AOSP 自带的测试模式同样是调用 `onScanResultInternal` 伪造 beacon。
+- **Android 17 必须投递到扫描线程**。`ScanController` 有独立的 `BluetoothScanManager` 线程，代码取其 `mHandler` 字段投递；Android 14~16 没有该字段也没有线程断言，回落到主线程。
+- **方法探测沿继承链进行**。`GattService extends ProfileService`，`start()` / `stop()` 在 Android 14/15 声明于父类，只查 `declaredMethods` 会漏掉，导致误判为"设备不支持"。
+- **构造器不写死参数签名**。`GattService` 构造器在 Android 15、16、17 分别是 `(Context)`、`(AdapterService)` 和五参数版本，代码统一挂全部构造器。
+- **Android 15 的 `ScanController` 是空壳**，本身不含 `onScanResult`，需要继续经 `getTransitionalScanHelper()` 下钻，因此不能用"类是否存在"判断系统版本。
+
+若日志出现 `Unsupported device`，说明两个入口类都没找到；出现 `No scan target under ...` 属于正常现象，表示该入口在当前系统上不承载扫描逻辑，会由另一个入口生效。
 
 ### 3. 对外发送（无需 Xposed）
 
