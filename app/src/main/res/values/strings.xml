@@ -28,6 +28,8 @@
     <string name="mode_none">Off</string>
     <string name="setting_general">General</string>
     <string name="setting_lang">Languages</string>
+    <string name="setting_hook_log">Hook debug logs</string>
+    <string name="setting_hook_log_desc">Print local simulation logs to the LSPosed log. Restart Bluetooth to apply.</string>
     <string name="lang_follow_system">Follow system</string>
     <string name="get_bluetooth_error">Could not load Bluetooth data from WebDAV.</string>
     <string name="webdav_error">Could not connect to WebDAV. Check your username and password.</string>

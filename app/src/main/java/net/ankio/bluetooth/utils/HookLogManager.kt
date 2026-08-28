@@ -14,7 +14,7 @@ object HookLogManager {
 
     private const val PREF_NAME = "net.ankio.bluetooth"
     private const val CONFIG_NAME = "config"
-    private const val LOG_ENABLED_KEY = "pref_hook_log_enabled"
+    private const val LOG_ENABLED_KEY = PrefKeys.HOOK_LOG_ENABLED
 
     private val preferences: XSharedPreferences by lazy {
         val prefs = XSharedPreferences(PREF_NAME, CONFIG_NAME)

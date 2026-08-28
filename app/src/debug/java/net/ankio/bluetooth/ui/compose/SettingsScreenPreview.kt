@@ -18,6 +18,8 @@ private fun SettingsScreenPreview(
         SettingsScreenContent(
             languageTag = "SYSTEM",
             onRecreateForLocale = { },
+            hookLogEnabled = true,
+            onHookLogEnabledChange = {},
             onThemeChanged = {},
         )
     }

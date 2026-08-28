@@ -11,4 +11,5 @@ object PrefKeys {
     const val SIMULATE_MODE = "simulate_mode"
     const val WEBDAV_LAST = "webdav_last"
     const val SETTING_LANGUAGE = "setting_language"
+    const val HOOK_LOG_ENABLED = "pref_hook_log_enabled"
 }

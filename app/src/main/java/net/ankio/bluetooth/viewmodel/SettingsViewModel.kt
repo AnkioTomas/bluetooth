@@ -22,4 +22,11 @@ class SettingsViewModel : ViewModel() {
         SpUtils.putString(PrefKeys.SETTING_LANGUAGE, value)
         LocaleDelegate.updateDefaultLocale(App.getLocale(value))
     }
+
+    /** Hook 侧调试日志开关，供系统蓝牙进程读取。 */
+    var hookLogEnabled: Boolean by persistedState(
+        initialValue = SpUtils.getBoolean(PrefKeys.HOOK_LOG_ENABLED, false),
+    ) { value ->
+        SpUtils.putBoolean(PrefKeys.HOOK_LOG_ENABLED, value)
+    }
 }

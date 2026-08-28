@@ -29,6 +29,8 @@
     <string name="mode_none">关闭</string>
     <string name="setting_general">通用</string>
     <string name="setting_lang">语言</string>
+    <string name="setting_hook_log">Hook 调试日志</string>
+    <string name="setting_hook_log_desc">在 LSPosed 日志中输出本机模拟的运行日志，重启蓝牙后生效。</string>
     <string name="lang_follow_system">跟随系统</string>
     <string name="get_bluetooth_error">抱歉，无法从Webdav获取蓝牙数据。</string>
     <string name="webdav_error">抱歉，我们无法连接Webdav服务器，请检查您的密码和用户名。</string>

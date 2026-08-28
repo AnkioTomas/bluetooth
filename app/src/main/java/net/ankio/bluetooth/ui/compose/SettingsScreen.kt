@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -17,6 +18,7 @@ import net.ankio.theme.AnkioTheme
 import net.ankio.theme.settings.SettingCardPosition
 import net.ankio.theme.settings.ThemeSectionHeader
 import net.ankio.theme.settings.ThemeSettingDropdown
+import net.ankio.theme.settings.ThemeSettingSwitch
 import net.ankio.theme.settings.UiSettingsScreen
 import net.ankio.utils.LangList
 import net.ankio.webdav.lib.ui.WebDavSettingsScreen
@@ -34,6 +36,8 @@ fun SettingsScreen(
             viewModel.languageTag = it
             onRecreateForLocale()
         },
+        hookLogEnabled = viewModel.hookLogEnabled,
+        onHookLogEnabledChange = { viewModel.hookLogEnabled = it },
         onThemeChanged = onThemeChanged,
     )
 }
@@ -42,6 +46,8 @@ fun SettingsScreen(
 fun SettingsScreenContent(
     languageTag: String,
     onRecreateForLocale: (String) -> Unit,
+    hookLogEnabled: Boolean,
+    onHookLogEnabledChange: (Boolean) -> Unit,
     onThemeChanged: () -> Unit,
 ) {
     val languageOptions = LangList.LOCALES.map { tag ->
@@ -77,7 +83,21 @@ fun SettingsScreenContent(
                     tint = AnkioTheme.colorScheme.primary,
                 )
             },
-            position = SettingCardPosition.Single,
+            position = SettingCardPosition.First,
+        )
+        ThemeSettingSwitch(
+            title = stringResource(R.string.setting_hook_log),
+            checked = hookLogEnabled,
+            onCheckedChange = onHookLogEnabledChange,
+            summary = stringResource(R.string.setting_hook_log_desc),
+            startAction = {
+                Icon(
+                    imageVector = Icons.Filled.BugReport,
+                    contentDescription = null,
+                    tint = AnkioTheme.colorScheme.primary,
+                )
+            },
+            position = SettingCardPosition.Last,
         )
 
         UiSettingsScreen(
