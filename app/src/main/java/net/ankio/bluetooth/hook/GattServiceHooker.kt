@@ -3,6 +3,7 @@ package net.ankio.bluetooth.hook
 import android.os.Handler
 import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import net.ankio.bluetooth.model.SimulateMode
 import net.ankio.bluetooth.utils.ByteUtils
@@ -11,6 +12,7 @@ import net.ankio.bluetooth.utils.PrefKeys
 import net.ankio.xposed.lib.hook.api.PartHooker
 import net.ankio.xposed.lib.hook.hook.Hooker
 import java.io.Serializable
+import java.lang.reflect.Method
 
 /**
  * 本机模拟：Hook 系统 GattService，周期性注入伪造 BLE 扫描结果。
@@ -25,12 +27,40 @@ class GattServiceHooker : PartHooker() {
         }
 
         HookLogManager.d(TAG, "Local BLE simulation started")
-        val gattClass = Hooker.loader(GATT_SERVICE)
+        // Android 17+ 的 GattService 仍然存在，但扫描回调已经不在它身上，必须优先认 ScanController。
+        val scanControllerClass = loadClassOrNull(SCAN_CONTROLLER)
+        if (scanControllerClass != null) {
+            hookScanController(scanControllerClass)
+            return
+        }
+
+        val gattClass = loadClassOrNull(GATT_SERVICE)
+        if (gattClass == null) {
+            HookLogManager.e(TAG, "Neither ScanController nor GattService found")
+            return
+        }
 
         when {
             hasMethod(gattClass, "start") -> hookStartStop(gattClass, "start", "stop")
             hasMethod(gattClass, "initMiFeature") -> hookStartStop(gattClass, "initMiFeature", "cleanup")
             else -> hookConstructorStop(gattClass)
+        }
+    }
+
+    /** Android 17+：扫描逻辑从 GattService 拆分到独立的 le_scan.ScanController。 */
+    private fun hookScanController(scanControllerClass: Class<*>) {
+        XposedBridge.hookAllConstructors(
+            scanControllerClass,
+            object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    attachBroadcaster(param.thisObject)
+                }
+            },
+        )
+        for (stop in listOf("stop", "cleanup")) {
+            if (hasMethod(scanControllerClass, stop)) {
+                Hooker.before(scanControllerClass, stop) { detachBroadcaster(it.thisObject) }
+            }
         }
     }
 
@@ -82,14 +112,14 @@ class GattServiceHooker : PartHooker() {
         private val scanPath = resolveScanPath(gattService)
 
         override fun run() {
-            scanPath?.let { (getter, trailingMac) ->
+            scanPath?.let { (getter, method) ->
                 val mac = HookConfig.getString(PrefKeys.PREF_MAC, DEFAULT_MAC)
                 val rssi = HookConfig.getString(PrefKeys.PREF_RSSI, DEFAULT_RSSI).toInt()
                 val advData = ByteUtils.hexStringToBytes(
                     HookConfig.getString(PrefKeys.PREF_DATA, DEFAULT_ADV_DATA),
                 )
                 try {
-                    invokeScanResult(getter(gattService), mac, rssi, advData, trailingMac)
+                    invokeScanResult(getter(gattService), method, mac, rssi, advData)
                 } catch (e: Throwable) {
                     HookLogManager.e(TAG, "Mock scan injection failed: ${e.message}", e)
                 }
@@ -102,6 +132,7 @@ class GattServiceHooker : PartHooker() {
         const val TAG = "BluetoothDebug"
 
         private const val GATT_SERVICE = "com.android.bluetooth.gatt.GattService"
+        private const val SCAN_CONTROLLER = "com.android.bluetooth.le_scan.ScanController"
         private const val ADAPTER_SERVICE = "com.android.bluetooth.btservice.AdapterService"
         private const val HANDLER_KEY = "handler"
         private const val RUNNABLE_KEY = "runnable"
@@ -114,7 +145,7 @@ class GattServiceHooker : PartHooker() {
         private fun hasMethod(clazz: Class<*>, name: String): Boolean =
             clazz.declaredMethods.any { it.name == name }
 
-        private fun resolveScanPath(gattService: Any): Pair<(Any) -> Any, Boolean>? {
+        private fun resolveScanPath(gattService: Any): Pair<(Any) -> Any, Method>? {
             val gattClass = gattService.javaClass
             val candidates = buildList {
                 if (hasMethod(gattClass, "getScanController")) {
@@ -136,13 +167,10 @@ class GattServiceHooker : PartHooker() {
                 } catch (_: Throwable) {
                     continue
                 }
-                val trailingMac = when (onScanResultParamCount(target)) {
-                    11 -> true
-                    10 -> false
-                    else -> continue
-                }
-                HookLogManager.d(TAG, "Resolved scan target: $name")
-                return getter to trailingMac
+                val method = findScanMethod(target.javaClass) ?: continue
+                if (method.parameterTypes.size !in 10..11) continue
+                HookLogManager.d(TAG, "Resolved scan target: $name.${method.name}")
+                return getter to method
             }
 
             HookLogManager.e(
@@ -152,18 +180,26 @@ class GattServiceHooker : PartHooker() {
             return null
         }
 
-        private fun onScanResultParamCount(target: Any): Int? =
-            target.javaClass.declaredMethods
-                .firstOrNull { it.name == "onScanResult" }
-                ?.parameterTypes
-                ?.size
+        /** Android 17+ 把注入点改名为 onScanResultInternal，优先使用它。 */
+        private fun findScanMethod(clazz: Class<*>): Method? {
+            val methods = clazz.declaredMethods
+            val internal = methods.filter { it.name == "onScanResultInternal" }
+            if (internal.isNotEmpty()) return internal.maxByOrNull { it.parameterTypes.size }
+            return methods.filter { it.name == "onScanResult" }.maxByOrNull { it.parameterTypes.size }
+        }
+
+        private fun loadClassOrNull(name: String): Class<*>? = try {
+            Hooker.loader(name)
+        } catch (_: Throwable) {
+            null
+        }
 
         private fun invokeScanResult(
             target: Any,
+            method: Method,
             mac: String,
             rssi: Int,
             advData: ByteArray,
-            trailingMac: Boolean,
         ) {
             val params: Array<Serializable> = arrayOf(
                 0x1b,
@@ -178,8 +214,12 @@ class GattServiceHooker : PartHooker() {
                 advData,
                 mac,
             )
-            val args = if (trailingMac) params else params.copyOf(params.size - 1)
-            XposedHelpers.callMethod(target, "onScanResult", *args)
+            val args = if (method.parameterTypes.size >= params.size) {
+                params
+            } else {
+                params.copyOf(params.size - 1)
+            }
+            XposedHelpers.callMethod(target, method.name, *args)
         }
     }
 }
