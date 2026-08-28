@@ -88,7 +88,7 @@ class GattServiceHooker : PartHooker() {
     private fun attachBroadcaster(gattService: Any) {
         var handler = XposedHelpers.getAdditionalInstanceField(gattService, HANDLER_KEY) as Handler?
         if (handler == null) {
-            handler = Handler(Looper.getMainLooper())
+            handler = scanThreadHandler(gattService) ?: Handler(Looper.getMainLooper())
         }
         XposedHelpers.setAdditionalInstanceField(gattService, HANDLER_KEY, handler)
 
@@ -202,6 +202,16 @@ class GattServiceHooker : PartHooker() {
             val internal = methods.filter { it.name == "onScanResultInternal" }
             if (internal.isNotEmpty()) return internal.maxByOrNull { it.parameterTypes.size }
             return methods.filter { it.name == "onScanResult" }.maxByOrNull { it.parameterTypes.size }
+        }
+
+        /**
+         * ScanController 的扫描回调跑在自己的 BluetoothScanManager 线程上，
+         * enforceScanThread() 会拒绝其他线程，必须借它的 mHandler 投递。
+         */
+        private fun scanThreadHandler(target: Any): Handler? = try {
+            XposedHelpers.getObjectField(target, "mHandler") as? Handler
+        } catch (_: NoSuchFieldError) {
+            null
         }
 
         private fun loadClassOrNull(name: String): Class<*>? = try {
