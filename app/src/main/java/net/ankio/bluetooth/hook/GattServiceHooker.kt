@@ -15,8 +15,14 @@ import java.io.Serializable
 import java.lang.reflect.Method
 
 /**
- * 本机模拟：Hook 系统 GattService，周期性注入伪造 BLE 扫描结果。
+ * 本机模拟：周期性向系统蓝牙的扫描回调注入伪造 BLE 扫描结果。
  * 仅在 [net.ankio.bluetooth.model.SimulateMode.Self] 下生效。
+ *
+ * 注入点随系统版本迁移，GattService 与 ScanController 两个入口都挂钩子，
+ * 由 [resolveScanTarget] 判断哪个入口能走到真正持有 onScanResult 的对象：
+ * - Android 15：GattService.start → getTransitionalScanHelper
+ * - Android 16：GattService 构造完成 → getScanController
+ * - Android 17：GattService 已无扫描逻辑，只有 ScanController 自身
  */
 class GattServiceHooker : PartHooker() {
 
@@ -28,103 +34,93 @@ class GattServiceHooker : PartHooker() {
         }
 
         HookLogManager.d(TAG, "Local BLE simulation started")
-        // Android 17+ 的 GattService 仍然存在，但扫描回调已经不在它身上，必须优先认 ScanController。
-        val scanControllerClass = loadClassOrNull(SCAN_CONTROLLER)
-        if (scanControllerClass != null) {
-            hookScanController(scanControllerClass)
-            return
-        }
-
         val gattClass = loadClassOrNull(GATT_SERVICE)
-        if (gattClass == null) {
-            HookLogManager.e(TAG, "Neither ScanController nor GattService found")
+        val scanControllerClass = loadClassOrNull(SCAN_CONTROLLER)
+        if (gattClass == null && scanControllerClass == null) {
+            HookLogManager.e(
+                TAG,
+                "Unsupported device; export com.android.bluetooth and open a GitHub issue",
+            )
             return
         }
 
+        gattClass?.let { hookGattService(it) }
+        scanControllerClass?.let { hookLifecycle(it, null, listOf("stop", "cleanup")) }
+    }
+
+    private fun hookGattService(gattClass: Class<*>) {
         when {
-            hasMethod(gattClass, "start") -> hookStartStop(gattClass, "start", "stop")
-            hasMethod(gattClass, "initMiFeature") -> hookStartStop(gattClass, "initMiFeature", "cleanup")
-            else -> hookConstructorStop(gattClass)
+            hasMethod(gattClass, "start") -> hookLifecycle(gattClass, "start", listOf("stop"))
+            hasMethod(gattClass, "initMiFeature") ->
+                hookLifecycle(gattClass, "initMiFeature", listOf("cleanup"))
+
+            else -> hookLifecycle(gattClass, null, listOf("cleanup"))
         }
     }
 
-    /** Android 17+：扫描逻辑从 GattService 拆分到独立的 le_scan.ScanController。 */
-    private fun hookScanController(scanControllerClass: Class<*>) {
-        XposedBridge.hookAllConstructors(
-            scanControllerClass,
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    attachBroadcaster(param.thisObject)
-                }
-            },
-        )
-        for (stop in listOf("stop", "cleanup")) {
-            if (hasMethod(scanControllerClass, stop)) {
-                Hooker.before(scanControllerClass, stop) { detachBroadcaster(it.thisObject) }
+    /**
+     * [start] 为 null 时挂全部构造器：Android 16+ 的 GattService 与 ScanController
+     * 都是构造完成即就绪，且构造器签名每个版本都在变，不能写死参数类型。
+     */
+    private fun hookLifecycle(clazz: Class<*>, start: String?, stops: List<String>) {
+        if (start == null) {
+            XposedBridge.hookAllConstructors(
+                clazz,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        attachBroadcaster(param.thisObject)
+                    }
+                },
+            )
+        } else {
+            Hooker.after(clazz, start) { attachBroadcaster(it.thisObject) }
+        }
+
+        for (stop in stops) {
+            if (hasMethod(clazz, stop)) {
+                Hooker.before(clazz, stop) { detachBroadcaster(it.thisObject) }
             }
         }
     }
 
-    private fun hookStartStop(gattClass: Class<*>, start: String, stop: String) {
-        Hooker.after(gattClass, start) { attachBroadcaster(it.thisObject) }
-        Hooker.before(gattClass, stop) { detachBroadcaster(it.thisObject) }
-    }
+    private fun attachBroadcaster(entry: Any) {
+        val (target, method) = resolveScanTarget(entry) ?: return
+        // 同一个 target 可能被两个入口先后发现，只保留一个定时器。
+        if (XposedHelpers.getAdditionalInstanceField(target, RUNNABLE_KEY) != null) return
 
-    /** Android 16+：GattService 在构造完成后就绪，停止仍走 cleanup。 */
-    private fun hookConstructorStop(gattClass: Class<*>) {
-        val adapterClass = Hooker.loader(ADAPTER_SERVICE)
-        XposedHelpers.findAndHookConstructor(
-            gattClass,
-            adapterClass,
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    attachBroadcaster(param.thisObject)
-                }
-            },
-        )
-        Hooker.before(gattClass, "cleanup") { detachBroadcaster(it.thisObject) }
-    }
-
-    private fun attachBroadcaster(gattService: Any) {
-        var handler = XposedHelpers.getAdditionalInstanceField(gattService, HANDLER_KEY) as Handler?
-        if (handler == null) {
-            handler = scanThreadHandler(gattService) ?: Handler(Looper.getMainLooper())
-        }
-        XposedHelpers.setAdditionalInstanceField(gattService, HANDLER_KEY, handler)
-
-        val broadcast = ScanBroadcaster(gattService, handler)
-        if (broadcast.scanPath == null) return
-        XposedHelpers.setAdditionalInstanceField(gattService, RUNNABLE_KEY, broadcast)
+        val handler = scanThreadHandler(target)
+            ?: scanThreadHandler(entry)
+            ?: Handler(Looper.getMainLooper())
+        val broadcast = ScanBroadcaster(target, method, handler)
+        XposedHelpers.setAdditionalInstanceField(target, RUNNABLE_KEY, broadcast)
+        XposedHelpers.setAdditionalInstanceField(entry, TARGET_KEY, target)
         handler.postDelayed(broadcast, INTERVAL_MS)
     }
 
-    private fun detachBroadcaster(gattService: Any) {
-        val handler = XposedHelpers.getAdditionalInstanceField(gattService, HANDLER_KEY) as? Handler
-            ?: return
-        val runnable = XposedHelpers.getAdditionalInstanceField(gattService, RUNNABLE_KEY) as? Runnable ?: return
-        handler.removeCallbacks(runnable)
+    private fun detachBroadcaster(entry: Any) {
+        val target = XposedHelpers.getAdditionalInstanceField(entry, TARGET_KEY) ?: return
+        val broadcast = XposedHelpers.getAdditionalInstanceField(target, RUNNABLE_KEY)
+            as? ScanBroadcaster ?: return
+        broadcast.handler.removeCallbacks(broadcast)
+        XposedHelpers.setAdditionalInstanceField(target, RUNNABLE_KEY, null)
     }
 
     private class ScanBroadcaster(
-        private val gattService: Any,
-        private val handler: Handler,
+        private val target: Any,
+        private val method: Method,
+        val handler: Handler,
     ) : Runnable {
 
-        /** 启动时解析一次，避免每 500ms 重复探测反射路径。 */
-        val scanPath = resolveScanPath(gattService)
-
         override fun run() {
-            scanPath?.let { (getter, method) ->
-                val mac = HookConfig.getString(PrefKeys.PREF_MAC, DEFAULT_MAC)
-                val rssi = HookConfig.getString(PrefKeys.PREF_RSSI, DEFAULT_RSSI).toInt()
-                val advData = ByteUtils.hexStringToBytes(
-                    HookConfig.getString(PrefKeys.PREF_DATA, DEFAULT_ADV_DATA),
-                )
-                try {
-                    invokeScanResult(getter(gattService), method, mac, rssi, advData)
-                } catch (e: Throwable) {
-                    HookLogManager.e(TAG, "Mock scan injection failed: ${e.message}", e)
-                }
+            val mac = HookConfig.getString(PrefKeys.PREF_MAC, DEFAULT_MAC)
+            val rssi = HookConfig.getString(PrefKeys.PREF_RSSI, DEFAULT_RSSI).toInt()
+            val advData = ByteUtils.hexStringToBytes(
+                HookConfig.getString(PrefKeys.PREF_DATA, DEFAULT_ADV_DATA),
+            )
+            try {
+                invokeScanResult(target, method, mac, rssi, advData)
+            } catch (e: Throwable) {
+                HookLogManager.e(TAG, "Mock scan injection failed: ${e.message}", e)
             }
             handler.postDelayed(this, INTERVAL_MS)
         }
@@ -135,9 +131,8 @@ class GattServiceHooker : PartHooker() {
 
         private const val GATT_SERVICE = "com.android.bluetooth.gatt.GattService"
         private const val SCAN_CONTROLLER = "com.android.bluetooth.le_scan.ScanController"
-        private const val ADAPTER_SERVICE = "com.android.bluetooth.btservice.AdapterService"
-        private const val HANDLER_KEY = "handler"
         private const val RUNNABLE_KEY = "runnable"
+        private const val TARGET_KEY = "scanTarget"
         private const val INTERVAL_MS = 500L
         private const val DEFAULT_MAC = "76:A7:8A:67:66:C9"
         private const val DEFAULT_RSSI = "-50"
@@ -145,8 +140,8 @@ class GattServiceHooker : PartHooker() {
             "02010403033CFE17FF0001B500024271A7B6000000C983926CB1011000000000000000000000000000000000000000000000000000000000000000000000"
 
         /**
-         * declaredMethods 只有本类声明的方法，GattService.start 之类继承自 ProfileService、
-         * onScanResult 也可能声明在父类，只看本类会误判成"设备不支持"。
+         * declaredMethods 只有本类声明的方法，GattService.start 继承自 ProfileService，
+         * 只看本类会把 Android 15 误判成"设备不支持"。
          */
         private fun allMethods(clazz: Class<*>): List<Method> {
             val result = mutableListOf<Method>()
@@ -161,42 +156,36 @@ class GattServiceHooker : PartHooker() {
         private fun hasMethod(clazz: Class<*>, name: String): Boolean =
             allMethods(clazz).any { it.name == name }
 
-        private fun resolveScanPath(gattService: Any): Pair<(Any) -> Any, Method>? {
-            val gattClass = gattService.javaClass
-            val candidates = buildList {
-                if (hasMethod(gattClass, "getScanController")) {
-                    add("getScanController" to { s: Any -> XposedHelpers.callMethod(s, "getScanController") })
+        /** 从入口对象出发，找到真正声明了 onScanResult 的那一层。 */
+        private fun resolveScanTarget(entry: Any): Pair<Any, Method>? {
+            val candidates = listOf("getScanController", "getTransitionalScanHelper")
+            val targets = buildList {
+                for (name in candidates) {
+                    if (!hasMethod(entry.javaClass, name)) continue
+                    val value = try {
+                        XposedHelpers.callMethod(entry, name)
+                    } catch (_: Throwable) {
+                        continue
+                    }
+                    if (value != null) add(name to value)
                 }
-                if (hasMethod(gattClass, "getTransitionalScanHelper")) {
-                    add(
-                        "getTransitionalScanHelper" to { s: Any ->
-                            XposedHelpers.callMethod(s, "getTransitionalScanHelper")
-                        },
-                    )
-                }
-                add("GattService" to { s: Any -> s })
+                add(entry.javaClass.simpleName to entry)
             }
 
-            for ((name, getter) in candidates) {
-                val target = try {
-                    getter(gattService)
-                } catch (_: Throwable) {
-                    continue
-                }
+            for ((name, target) in targets) {
                 val method = findScanMethod(target.javaClass) ?: continue
                 if (method.parameterTypes.size < 10) continue
                 HookLogManager.d(TAG, "Resolved scan target: $name.${method.name}")
-                return getter to method
+                return target to method
             }
-
-            HookLogManager.e(
-                TAG,
-                "Unsupported device; export com.android.bluetooth and open a GitHub issue",
-            )
+            HookLogManager.d(TAG, "No scan target under ${entry.javaClass.name}")
             return null
         }
 
-        /** Android 17+ 把注入点改名为 onScanResultInternal，优先使用它。 */
+        /**
+         * onScanResult 带 enforceScanThread()，从别的线程调必抛 IllegalStateException；
+         * onScanResultInternal 没有该断言，是唯一可用的注入点。
+         */
         private fun findScanMethod(clazz: Class<*>): Method? {
             val methods = allMethods(clazz)
             val internal = methods.filter { it.name == "onScanResultInternal" }
@@ -204,10 +193,7 @@ class GattServiceHooker : PartHooker() {
             return methods.filter { it.name == "onScanResult" }.maxByOrNull { it.parameterTypes.size }
         }
 
-        /**
-         * ScanController 的扫描回调跑在自己的 BluetoothScanManager 线程上，
-         * enforceScanThread() 会拒绝其他线程，必须借它的 mHandler 投递。
-         */
+        /** Android 17 的 ScanController 把扫描逻辑限制在自己的 mHandler 线程上。 */
         private fun scanThreadHandler(target: Any): Handler? = try {
             XposedHelpers.getObjectField(target, "mHandler") as? Handler
         } catch (_: NoSuchFieldError) {
