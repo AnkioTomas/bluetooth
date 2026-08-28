@@ -21,8 +21,9 @@ import java.lang.reflect.Method
 class GattServiceHooker : PartHooker() {
 
     override fun hook() {
-        if (HookConfig.getString(PrefKeys.SIMULATE_MODE, "") != SimulateMode.Self.toString()) {
-            HookLogManager.d(TAG, "Local BLE simulation disabled")
+        val mode = HookConfig.getString(PrefKeys.SIMULATE_MODE, "")
+        if (mode != SimulateMode.Self.toString()) {
+            HookLogManager.d(TAG, "Local BLE simulation disabled, mode=[$mode]")
             return
         }
 
@@ -92,6 +93,7 @@ class GattServiceHooker : PartHooker() {
         XposedHelpers.setAdditionalInstanceField(gattService, HANDLER_KEY, handler)
 
         val broadcast = ScanBroadcaster(gattService, handler)
+        if (broadcast.scanPath == null) return
         XposedHelpers.setAdditionalInstanceField(gattService, RUNNABLE_KEY, broadcast)
         handler.postDelayed(broadcast, INTERVAL_MS)
     }
@@ -109,7 +111,7 @@ class GattServiceHooker : PartHooker() {
     ) : Runnable {
 
         /** 启动时解析一次，避免每 500ms 重复探测反射路径。 */
-        private val scanPath = resolveScanPath(gattService)
+        val scanPath = resolveScanPath(gattService)
 
         override fun run() {
             scanPath?.let { (getter, method) ->
@@ -142,8 +144,22 @@ class GattServiceHooker : PartHooker() {
         private const val DEFAULT_ADV_DATA =
             "02010403033CFE17FF0001B500024271A7B6000000C983926CB1011000000000000000000000000000000000000000000000000000000000000000000000"
 
+        /**
+         * declaredMethods 只有本类声明的方法，GattService.start 之类继承自 ProfileService、
+         * onScanResult 也可能声明在父类，只看本类会误判成"设备不支持"。
+         */
+        private fun allMethods(clazz: Class<*>): List<Method> {
+            val result = mutableListOf<Method>()
+            var current: Class<*>? = clazz
+            while (current != null && current != Any::class.java) {
+                result += current.declaredMethods
+                current = current.superclass
+            }
+            return result
+        }
+
         private fun hasMethod(clazz: Class<*>, name: String): Boolean =
-            clazz.declaredMethods.any { it.name == name }
+            allMethods(clazz).any { it.name == name }
 
         private fun resolveScanPath(gattService: Any): Pair<(Any) -> Any, Method>? {
             val gattClass = gattService.javaClass
@@ -168,7 +184,7 @@ class GattServiceHooker : PartHooker() {
                     continue
                 }
                 val method = findScanMethod(target.javaClass) ?: continue
-                if (method.parameterTypes.size !in 10..11) continue
+                if (method.parameterTypes.size < 10) continue
                 HookLogManager.d(TAG, "Resolved scan target: $name.${method.name}")
                 return getter to method
             }
@@ -182,7 +198,7 @@ class GattServiceHooker : PartHooker() {
 
         /** Android 17+ 把注入点改名为 onScanResultInternal，优先使用它。 */
         private fun findScanMethod(clazz: Class<*>): Method? {
-            val methods = clazz.declaredMethods
+            val methods = allMethods(clazz)
             val internal = methods.filter { it.name == "onScanResultInternal" }
             if (internal.isNotEmpty()) return internal.maxByOrNull { it.parameterTypes.size }
             return methods.filter { it.name == "onScanResult" }.maxByOrNull { it.parameterTypes.size }
