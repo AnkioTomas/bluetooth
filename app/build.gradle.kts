@@ -14,8 +14,8 @@ android {
         applicationId = "net.ankio.bluetooth"
         minSdk = 30
         targetSdk = 33
-        versionCode = 201
-        versionName = "2.0.1"
+        versionCode = 202
+        versionName = "2.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
